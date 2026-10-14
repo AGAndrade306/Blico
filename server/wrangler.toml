@@ -17,3 +17,6 @@ DAILY_LIMIT = "300"
 # Segredos (nunca neste arquivo):
 #   npx wrangler secret put ANTHROPIC_API_KEY
 #   npx wrangler secret put DEVICE_TOKEN
+
+# Prévias por PR da integração da Cloudflare com o GitHub (`wrangler preview`). Vazio herda o resto da configuração.
+[previews]
