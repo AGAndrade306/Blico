@@ -12,6 +12,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -76,10 +77,12 @@ class MainActivity : ComponentActivity() {
     private var resumeTick by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // Papel sempre claro: ícones escuros nas barras do sistema, mesmo no modo escuro.
+        val clara = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = clara, navigationBarStyle = clara)
         super.onCreate(savedInstanceState)
         setContent {
-            RisoTheme {
+            RisoTheme(dark = false) {
                 Box(Modifier.fillMaxSize().paper()) {
                     SetupScreen(resumeTick)
                 }

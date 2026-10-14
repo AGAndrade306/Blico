@@ -52,3 +52,7 @@ Cada decisão técnica, com data e motivo. Mudar uma delas exige uma nova entrad
 - **Fontes empacotadas, não baixadas em tempo de execução:** Bagel Fat One para títulos (redonda e gorda como o logo) e Rubik para o texto, as duas com licença OFL (em `docs/licencas`). Foram cortadas para o alfabeto latino, com cerca de 50 KB cada, e o app não depende do Google Play Services para as fontes.
 - **O grão é gerado no código**, como uma textura pequena repetida, e não como imagem; assim ele funciona em qualquer tamanho de tela e no modo escuro.
 - **Ícone adaptativo com o logo**, com fundo de papel sempre claro e uma versão monocromática para os ícones temáticos do One UI.
+
+## App sempre no papel claro
+
+O fundo escuro do modo noturno ficou difícil de ler. A tela do app usa sempre o papel creme, com ícones escuros nas barras do sistema. O cartão do agente continua seguindo o tema do sistema, porque nele o escuro funcionou bem.
