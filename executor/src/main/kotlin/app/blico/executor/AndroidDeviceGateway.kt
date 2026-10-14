@@ -40,6 +40,20 @@ class AndroidDeviceGateway(
             )
             is DeviceAction.WebSearch -> start(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, action.query))
             is DeviceAction.ShareText -> shareText(action)
+            is DeviceAction.OpenFile -> start(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(MediaStoreFileIndex.uriFor(action.id, action.mime), action.mime.ifEmpty { "*/*" })
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            )
+            is DeviceAction.ShareFile -> {
+                val uri = MediaStoreFileIndex.uriFor(action.id, action.mime)
+                val send = Intent(Intent.ACTION_SEND)
+                    .setType(action.mime.ifEmpty { "*/*" })
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                start(Intent.createChooser(send, null).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            }
+            is DeviceAction.RenameFile -> rename(action)
         }
     } catch (e: ActivityNotFoundException) {
         DeviceResult.NotInstalled(appLabel(action))
@@ -82,6 +96,42 @@ class AndroidDeviceGateway(
         return start(if (pkg != null) send.setPackage(pkg) else Intent.createChooser(send, null))
     }
 
+    /**
+     * Renomeia pelo MediaStore, que mantém o índice em dia. Com o acesso a todos os arquivos
+     * o update é permitido; se o sistema recusar, cai para renomear o arquivo e reindexar.
+     */
+    private fun rename(action: DeviceAction.RenameFile): DeviceResult {
+        val uri = android.content.ContentUris.withAppendedId(
+            android.provider.MediaStore.Files.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL),
+            action.id.toLong(),
+        )
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, action.newName)
+        }
+        val updated = try {
+            context.contentResolver.update(uri, values, null, null)
+        } catch (_: SecurityException) {
+            0
+        } catch (_: IllegalStateException) {
+            0 // já existe um arquivo com esse nome
+        }
+        if (updated > 0) return DeviceResult.Done
+        return renameOnDisk(uri, action.newName)
+    }
+
+    @Suppress("DEPRECATION") // DATA ainda é o caminho real, e só é usado com o acesso a todos os arquivos.
+    private fun renameOnDisk(uri: Uri, newName: String): DeviceResult {
+        val path = context.contentResolver.query(uri, arrayOf(android.provider.MediaStore.MediaColumns.DATA), null, null, null)
+            ?.use { if (it.moveToFirst()) it.getString(0) else null }
+            ?: return DeviceResult.Failed("arquivo sem caminho")
+        val from = java.io.File(path)
+        val to = java.io.File(from.parentFile, newName)
+        if (to.exists()) return DeviceResult.Failed("já existe $newName")
+        if (!from.renameTo(to)) return DeviceResult.Failed("o sistema não deixou renomear")
+        android.media.MediaScannerConnection.scanFile(context, arrayOf(from.path, to.path), null, null)
+        return DeviceResult.Done
+    }
+
     private fun start(intent: Intent): DeviceResult {
         launcher(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         return DeviceResult.Done
@@ -102,6 +152,8 @@ class AndroidDeviceGateway(
         is DeviceAction.Dial -> "discador"
         is DeviceAction.SetAlarm, is DeviceAction.SetTimer -> "app de relógio"
         is DeviceAction.WebSearch -> "navegador"
+        is DeviceAction.OpenFile -> "app para abrir esse arquivo"
+        is DeviceAction.ShareFile, is DeviceAction.RenameFile -> "arquivo"
     }
 
     private companion object {

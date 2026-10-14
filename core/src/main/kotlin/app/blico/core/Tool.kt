@@ -21,6 +21,9 @@ sealed interface ToolResult {
     data class NeedsChoice(val question: String, val options: List<Choice>) : ToolResult
 
     data class Choice(val label: String, val call: ToolCall)
+
+    /** Resultado de uma busca: a lista aparece no cartão, e cada item tem as próprias ações. */
+    data class Files(val spoken: String, val items: List<FileItem>) : ToolResult
 }
 
 /** O que uma ferramenta precisa do mundo lá fora. No app são implementações Android; nos testes, fakes. */
@@ -29,6 +32,8 @@ data class ExecContext(
     val device: DeviceGateway,
     val contacts: ContactDirectory,
     val places: PlaceBook,
+    val files: FileIndex = FileIndex.None,
+    val clock: java.time.Clock = java.time.Clock.systemDefaultZone(),
 )
 
 interface Tool {
@@ -43,6 +48,12 @@ interface Tool {
 
     /** Pacotes Android que esta ferramenta pode tocar. O Executor recusa o resto. */
     val apps: Set<String>
+
+    /**
+     * Se a ferramenta é oferecida aos modelos. As que agem sobre um item já mostrado
+     * (um arquivo da lista, por id) só nascem de um toque no cartão.
+     */
+    val exposedToModels: Boolean get() = true
 
     /**
      * Resumo do cartão de confirmação, gerado a partir da chamada estruturada.

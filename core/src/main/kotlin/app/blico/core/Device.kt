@@ -22,6 +22,15 @@ sealed interface DeviceAction {
 
     /** Compartilha texto com um app; o usuário escolhe o destinatário lá dentro. */
     data class ShareText(val text: String, val packageName: String? = null) : DeviceAction
+
+    /** Abre um arquivo do [FileIndex] no app que o sistema escolher. */
+    data class OpenFile(val id: String, val mime: String) : DeviceAction
+
+    /** Abre a folha de compartilhamento com o arquivo; o usuário escolhe o destino. */
+    data class ShareFile(val id: String, val mime: String) : DeviceAction
+
+    /** Troca o nome do arquivo, mantendo a pasta. */
+    data class RenameFile(val id: String, val newName: String) : DeviceAction
 }
 
 sealed interface DeviceResult {

@@ -54,6 +54,7 @@ class RuleRouter : LlmProvider {
         private const val SEND = "(?:manda|mande|envia|envie|escreve|escreva|fala|avisa|diz|diga)"
         private const val MSG = "(?: (?:uma |um )?(?:mensagem|msg|zap|whats|whatsapp|recado))?(?: no (?:whats|whatsapp|zap))?"
         private const val SEP = "(?:,? (?:dizendo|falando|avisando|perguntando)(?: que)?|,? que|:|,)"
+        private const val FILE_WORDS = "arquivos?|pdfs?|documentos?|fotos?|imagens?|imagem|vídeos?|videos?|planilhas?|áudios?|audios?|gravaç(?:ão|ões)|apresentaç(?:ão|ões)|prints?|capturas? de tela"
         private const val TO_PLACE = "(?:pra|para|pro|até|ate|ao|à)"
 
         private fun g(m: Match, name: String) = m[name]
@@ -103,6 +104,19 @@ class RuleRouter : LlmProvider {
             // Depois de alarme e timer, porque "coloca" também serve para eles. "toca Djavan", "toca meu mix no spotify", "coloca uma música do Legião"
             Rule("^(?:toca|toque|tocar|bota|coloca|põe|poe)(?: pra tocar)? (?<busca>.+?)(?: no spotify)?$") { m ->
                 ToolCall("spotify_tocar", mapOf("busca" to g(m, "busca")!!))
+            },
+            // Antes da busca na web: "acha o pdf do contrato", "fotos de ontem", "cadê a planilha de gastos"
+            Rule("^(?:(?:procura|procure|busca|busque|acha|ache|encontra|encontre|localiza|mostra|mostre|me mostra|me mostre|cadê|cade|onde (?:está|esta|tá|ta|fica))(?: (?:o|a|os|as|meu|minha|meus|minhas|aquele|aquela))? )?(?<tipo>$FILE_WORDS)(?: (?:de|do|da|dos|das|com|chamado|chamada|sobre|que tem))?(?: (?<termo>.+?))?(?: no (?:celular|telefone|aparelho))?$") { m ->
+                val (termo, periodo) = FileSearch.splitPeriod(g(m, "termo"))
+                val kind = FileKind.fromWord(m.lower("tipo")!!)
+                ToolCall(
+                    "buscar_arquivos",
+                    buildMap {
+                        termo?.let { put("termo", it) }
+                        kind?.let { put("tipo", it.name.lowercase()) }
+                        periodo?.let { put("periodo", it.name.lowercase()) }
+                    },
+                )
             },
             // "pesquisa preço do dólar", "procura na internet receita de bolo"
             Rule("^(?:pesquisa|pesquise|pesquisar|procura|procure|busca|busque|googla|google)(?: na internet| no google)?(?: por| sobre)? (?<q>.+?)(?: na internet| no google)?$") { m ->

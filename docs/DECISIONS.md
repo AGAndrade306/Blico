@@ -36,3 +36,12 @@ Cada decisão técnica, com data e motivo. Mudar uma delas exige uma nova entrad
 - **A nuvem também responde perguntas** (`LlmDecision.answer`), e o app fala a resposta. As ferramentas pedidas pela nuvem passam pela mesma `RiskPolicy` das regras.
 - **Limite diário opcional por KV** e logs só com metadados (latência, quantas ferramentas foram oferecidas, qual foi escolhida), nunca o texto do pedido.
 - **O modelo local fica para a Etapa 3b**, porque o LiteRT-LM depende do Google Maven, que este ambiente de desenvolvimento não alcança; a nuvem entrega valor antes.
+
+## 2026-10-14 — Busca de arquivos e escolha de voz
+
+- **Arquivos pelo MediaStore com "acesso a todos os arquivos"** (`MANAGE_EXTERNAL_STORAGE`). Sem ele o Android só mostra fotos, vídeos e áudios a outros apps; PDFs e documentos ficam invisíveis. O Blico é instalado por APK e não vai para a Play Store, então a política da loja para essa permissão não se aplica. A busca roda no aparelho e nenhum nome de arquivo vai para a nuvem.
+- **O índice do aparelho traz candidatos e o `core` decide** (`FileSearch.rank`): termos sem acento, caixa ou separadores, todos os termos no nome, do mais recente ao mais antigo. Assim a regra é testada sem Android. No MediaStore, letras acentuadas viram curinga do `LIKE`, para "relatório" achar "relatorio".
+- **Ações sobre um arquivo só nascem do toque na lista** (`exposedToModels = false`). Elas usam o id do item mostrado, que o modelo nunca vê; assim a nuvem não pode inventar um id. Abrir é READ, compartilhar é PREPARE (você escolhe o destino) e renomear é COMMIT, com o cartão Confirmar mostrando o nome antigo e o novo. A extensão é mantida quando o nome novo vem sem ela.
+- **Renomear tenta o MediaStore e cai para o arquivo em disco** com reindexação, se o sistema recusar o update.
+- **Excluir fica de fora por enquanto**: no Android isso passa por uma tela do sistema, e o cartão Confirmar não substitui a lixeira.
+- **Voz: só vozes que funcionam sem internet.** O motor (Samsung, Google…) e a voz são escolhidos na tela inicial, com velocidade e tom. Vozes de rede mandariam o texto falado para fora do aparelho (regra 5), então nem aparecem na lista.
