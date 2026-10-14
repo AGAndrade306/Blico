@@ -2,6 +2,7 @@ package app.blico.brain
 
 import android.app.DownloadManager
 import android.content.Context
+import android.net.ConnectivityManager
 import android.net.Uri
 import java.io.File
 
@@ -49,19 +50,31 @@ enum class LocalModel(
 sealed interface ModelDownload {
     data object Idle : ModelDownload
 
-    data class Running(val model: LocalModel, val done: Long, val total: Long, val waitingForWifi: Boolean) : ModelDownload
+    /**
+     * [waiting] explica por que não está andando (esperando Wi-Fi, sem internet), ou é nulo.
+     * [canUseMobileData] é verdadeiro quando a espera é só pelo Wi-Fi e dá para liberar os dados móveis.
+     */
+    data class Running(
+        val model: LocalModel,
+        val done: Long,
+        val total: Long,
+        val waiting: String? = null,
+        val canUseMobileData: Boolean = false,
+    ) : ModelDownload
 
     data class Failed(val model: LocalModel, val message: String) : ModelDownload
 }
 
 /**
  * Guarda, baixa e apaga os modelos. O download usa o DownloadManager do Android, que continua
- * com o app fechado, retoma depois de cair e só usa Wi-Fi (são alguns GB).
+ * com o app fechado e retoma depois de cair. Por padrão espera o Wi-Fi (são alguns GB);
+ * a pessoa pode liberar os dados móveis.
  */
 class ModelStore(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("modelo_local", Context.MODE_PRIVATE)
     private val downloads = appContext.getSystemService(DownloadManager::class.java)
+    private val network = appContext.getSystemService(ConnectivityManager::class.java)
     private val dir: File = appContext.getExternalFilesDir(DIR) ?: File(appContext.filesDir, DIR)
 
     /** Modelo que o assistente usa. Só vale se o arquivo existe. */
@@ -76,8 +89,11 @@ class ModelStore(context: Context) {
     /** Arquivo do modelo escolhido, se já foi baixado. */
     fun selectedFile(): File? = selected?.let(::file)?.takeIf { it.isFile }
 
-    /** Começa a baixar. Devolve uma frase de erro se não dá para começar. */
-    fun download(model: LocalModel): String? {
+    /**
+     * Começa a baixar. Por padrão só no Wi-Fi; [mobileData] libera os dados móveis.
+     * Devolve uma frase de erro se não dá para começar.
+     */
+    fun download(model: LocalModel, mobileData: Boolean = false): String? {
         if (isInstalled(model)) {
             selected = model
             return null
@@ -94,11 +110,17 @@ class ModelStore(context: Context) {
             .setDescription("Modelo para entender pedidos sem internet")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalFilesDir(appContext, DIR, partial(model).name)
-            .setAllowedOverMetered(false)
+            .setAllowedOverMetered(mobileData)
             .setAllowedOverRoaming(false)
         val id = downloads.enqueue(request)
-        prefs.edit().putLong("download", id).putString("baixando", model.id).apply()
+        prefs.edit().putLong("download", id).putString("baixando", model.id).putBoolean("dados_moveis", mobileData).apply()
         return null
+    }
+
+    /** Recomeça o download atual liberando os dados móveis. */
+    fun useMobileData(): String? {
+        val model = LocalModel.byId(prefs.getString("baixando", null)) ?: return null
+        return download(model, mobileData = true)
     }
 
     /**
@@ -125,12 +147,26 @@ class ModelStore(context: Context) {
                     clear()
                     ModelDownload.Failed(model, failure(reason))
                 }
-                else -> ModelDownload.Running(
-                    model,
-                    done,
-                    total,
-                    waitingForWifi = status == DownloadManager.STATUS_PAUSED && reason == DownloadManager.PAUSED_QUEUED_FOR_WIFI,
-                )
+                else -> {
+                    val wifiOnly = !prefs.getBoolean("dados_moveis", false)
+                    // Sem Wi-Fi, o DownloadManager fica pendente ou pausado sem dizer muito; a conexão explica.
+                    val onMobile = network.isActiveNetworkMetered && network.activeNetwork != null
+                    val waitingForWifi = wifiOnly && onMobile &&
+                        (status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_PAUSED)
+                    val wifi = waitingForWifi || (status == DownloadManager.STATUS_PAUSED && reason == DownloadManager.PAUSED_QUEUED_FOR_WIFI)
+                    val waiting = when {
+                        wifi ->
+                            "Esperando o Wi-Fi. Agora você está nos dados móveis."
+                        status == DownloadManager.STATUS_PAUSED && reason == DownloadManager.PAUSED_WAITING_FOR_NETWORK ->
+                            "Sem internet. Continua quando a conexão voltar."
+                        status == DownloadManager.STATUS_PAUSED && reason == DownloadManager.PAUSED_WAITING_TO_RETRY ->
+                            "A conexão caiu. Tentando de novo…"
+                        status == DownloadManager.STATUS_PAUSED -> "Pausado pelo sistema."
+                        status == DownloadManager.STATUS_PENDING -> "Começando…"
+                        else -> null
+                    }
+                    ModelDownload.Running(model, done, total, waiting, canUseMobileData = wifiOnly && wifi)
+                }
             }
         }
     }
@@ -155,7 +191,7 @@ class ModelStore(context: Context) {
         return ModelDownload.Idle
     }
 
-    private fun clear() = prefs.edit().remove("download").remove("baixando").apply()
+    private fun clear() = prefs.edit().remove("download").remove("baixando").remove("dados_moveis").apply()
 
     private fun partial(model: LocalModel) = File(dir, model.fileName + ".baixando")
 

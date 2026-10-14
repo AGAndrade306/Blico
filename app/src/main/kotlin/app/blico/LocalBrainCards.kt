@@ -24,6 +24,7 @@ import app.blico.brain.LocalModel
 import app.blico.brain.ModelDownload
 import app.blico.core.Benchmark
 import app.blico.ui.BlicoButton
+import app.blico.ui.LocalBlico
 import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoProgress
 import kotlinx.coroutines.Job
@@ -56,7 +57,7 @@ fun LocalModelCard(app: BlicoApp) {
             Text((if (selected != null) "✓ " else "○ ") + "Cérebro no celular", style = MaterialTheme.typography.titleMedium)
             Text(
                 "O Gemma entende pedidos fora dos comandos básicos e responde perguntas sem internet. " +
-                    "O download é feito uma vez, só no Wi-Fi.",
+                    "O download é feito uma vez, pelo Wi-Fi ou pelos dados móveis, se você liberar.",
                 style = MaterialTheme.typography.bodySmall,
             )
             LocalModel.entries.forEach { model ->
@@ -70,18 +71,20 @@ fun LocalModelCard(app: BlicoApp) {
                 when {
                     running != null -> {
                         BlicoProgress(running.done.toFloat() / running.total.coerceAtLeast(1), Modifier.padding(top = 8.dp, bottom = 4.dp))
-                        Text(
-                            if (running.waitingForWifi) {
-                                "Esperando o Wi-Fi para continuar"
-                            } else {
-                                "${gb(running.done)} de ${gb(running.total)}"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        BlicoButton("Cancelar", primary = false, onClick = {
-                            app.models.cancel()
-                            download = ModelDownload.Idle
-                        })
+                        Text("${gb(running.done)} de ${gb(running.total)}", style = MaterialTheme.typography.bodySmall)
+                        running.waiting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = LocalBlico.current.muted) }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                            if (running.canUseMobileData) {
+                                BlicoButton("Usar dados móveis", onClick = {
+                                    error = app.models.useMobileData()
+                                    download = app.models.poll()
+                                })
+                            }
+                            BlicoButton("Cancelar", primary = false, onClick = {
+                                app.models.cancel()
+                                download = ModelDownload.Idle
+                            })
+                        }
                     }
                     model in installed -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                         if (model != selected) {
