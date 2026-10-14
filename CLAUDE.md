@@ -41,5 +41,6 @@ Regra de dependência: `core` não depende de nada do projeto; todos os outros d
 
 - Etapa 0: esqueleto, CI, `core` com testes.
 - Etapa 1: assistente padrão (VoiceInteractionService) com captura e transcrição.
-- Etapa 2: cérebro híbrido e servidor Ktor no Cloud Run; benchmark de 100 comandos.
-- Etapa 3: primeiras ações (WhatsApp, Uber, 99, iFood) por deep link; testes de Accessibility e Shizuku.
+- Etapa 2: roteador por regras e primeiras ações por intent (WhatsApp, ligar, Uber, 99, iFood, Spotify, Maps, alarme, timer, busca), com resposta falada.
+- Etapa 3: cérebro híbrido (modelo local LiteRT-LM + servidor Ktor + nuvem) para o que as regras não entendem; benchmark de 100 comandos.
+- Etapa 4: Accessibility, cartão Confirmar e envio de verdade (classe 2); testes de Shizuku.

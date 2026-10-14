@@ -30,14 +30,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.OutlinedButton
+import app.blico.core.Outcome
+import app.blico.core.ToolCall
 import app.blico.voice.ListeningState
 import app.blico.voice.ListeningState.Phase
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AssistantOverlay(
     state: ListeningState,
     needsPermission: Boolean,
+    thinking: Boolean,
+    outcome: Outcome?,
     onRetry: () -> Unit,
+    onChoose: (ToolCall) -> Unit,
+    onConfirm: (ToolCall) -> Unit,
     onOpenSetup: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -94,7 +104,40 @@ internal fun AssistantOverlay(
                         )
                     }
 
-                    if (state.phase == Phase.DONE || state.phase == Phase.FAILED) {
+                    if (thinking) {
+                        Spacer(Modifier.height(12.dp))
+                        Text("Fazendo…", style = MaterialTheme.typography.bodyLarge)
+                    }
+
+                    outcome?.let { out ->
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            out.spoken,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (out is Outcome.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        )
+                        // Escolha entre contatos: cada botão já leva a chamada completa.
+                        if (out.choices.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                out.choices.forEach { (label, call) ->
+                                    OutlinedButton(onClick = { onChoose(call) }) { Text(label) }
+                                }
+                            }
+                        }
+                        // Classe 2: o texto vem do resumo estruturado, nunca do modelo.
+                        if (out is Outcome.Confirm) {
+                            Spacer(Modifier.height(8.dp))
+                            out.summary.fields.forEach { (k, v) ->
+                                Text("$k: $v", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Button(onClick = { onConfirm(out.call) }) { Text("Confirmar") }
+                        }
+                    }
+
+                    val finished = !thinking && (state.phase == Phase.FAILED || (state.phase == Phase.DONE && outcome != null && outcome !is Outcome.Done))
+                    if (finished) {
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = onRetry) { Text("Falar de novo") }

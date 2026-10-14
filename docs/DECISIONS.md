@@ -17,3 +17,12 @@ Cada decisão técnica, com data e motivo. Mudar uma delas exige uma nova entrad
 - **A primeira versão transcreve com `SpeechRecognizer.createOnDeviceSpeechRecognizer`**, e não com whisper.cpp. Motivo: já vem no aparelho, tem detecção de fim de fala embutida e resultados parciais, e não exige NDK nem um modelo de ~500 MB no APK. Assim o assistente fica testável no S25 desde já. O whisper.cpp continua como alternativa atrás da interface `Transcriber`, se a qualidade em pt-BR ou a latência não servirem.
 - **Sem fallback para reconhecimento em nuvem.** Se o reconhecedor local não existir, o Blico avisa em vez de mandar o áudio para fora (regra 5).
 - **Assistente padrão via `VoiceInteractionService`**, com sessão em Compose. O papel `ROLE_ASSISTANT` não pode ser pedido por diálogo; a tela de configuração leva às Configurações de apps padrão.
+
+## 2026-10-14 — Etapa 2: roteador por regras antes de qualquer modelo
+
+- **Os comandos mais comuns são entendidos por regras (`RuleRouter`)**, sem modelo. Motivo: são instantâneos, offline, previsíveis e testáveis; o modelo local e a nuvem entram depois, só para o que as regras não cobrem. O `Assistant` tenta os provedores em ordem e para no primeiro com confiança suficiente.
+- **Ferramentas descrevem ações como dados (`DeviceAction`)** e um único backend Android (`AndroidDeviceGateway`) as executa por intents. Assim os links montados (WhatsApp, Uber, Maps) são testados sem aparelho.
+- **Nenhuma ferramenta desta etapa envia nada sozinha.** WhatsApp abre a conversa com o texto pronto, ligar abre o discador, Uber abre com o destino preenchido: o último toque é sempre seu (classe 1). O envio automático, que exige Accessibility e o cartão Confirmar, fica para depois.
+- **99 e iFood só abrem o app** até o levantamento dos deep links no aparelho.
+- **Lugares (casa, trabalho) em SharedPreferences privadas**, sem criptografia por enquanto; a criptografia entra com a memória em arquivos.
+- **Roadmap renumerado:** o cérebro híbrido (modelo local + servidor + nuvem) passa a ser a Etapa 3.

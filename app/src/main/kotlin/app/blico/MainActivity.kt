@@ -27,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -39,6 +40,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.blico.core.Outcome
+import app.blico.memory.PrefsPlaceBook
 import app.blico.voice.ListeningState
 import app.blico.voice.OnDeviceTranscriber
 import kotlinx.coroutines.Job
@@ -76,7 +79,13 @@ class MainActivity : ComponentActivity() {
         val isAssistant = roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)
         val onDevice = transcriber.isAvailable()
 
+        val contactsGranted =
+            checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+
         val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            resumeTick++
+        }
+        val askContacts = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             resumeTick++
         }
 
@@ -129,8 +138,19 @@ class MainActivity : ComponentActivity() {
                 OutlinedButton(onClick = ::openSideKeySettings) { Text("Abrir Configurações") }
             }
 
+            Step(
+                title = "5. Contatos",
+                done = contactsGranted,
+                detail = "Para achar o número quando você diz \"manda pro João\". A agenda não sai do celular.",
+            ) {
+                Button(onClick = { askContacts.launch(Manifest.permission.READ_CONTACTS) }) { Text("Permitir contatos") }
+            }
+
+            Places()
+
             Spacer(Modifier.height(8.dp))
             ListenTest(transcriber, enabled = micGranted)
+            CommandTest()
         }
     }
 
@@ -149,6 +169,62 @@ class MainActivity : ComponentActivity() {
                     Spacer(Modifier.height(8.dp))
                     action()
                 }
+            }
+        }
+    }
+
+    /** Endereços de casa e trabalho, usados por "pede um uber pra casa" e "me leva pro trabalho". */
+    @Composable
+    private fun Places() {
+        val places = (application as BlicoApp).places
+        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Lugares", style = MaterialTheme.typography.titleMedium)
+                Text("Usados no Uber e na navegação.", style = MaterialTheme.typography.bodySmall)
+                PrefsPlaceBook.ALIASES.forEach { alias ->
+                    var value by remember { mutableStateOf(places.resolve(alias).orEmpty()) }
+                    OutlinedTextField(
+                        value = value,
+                        onValueChange = {
+                            value = it
+                            places.set(alias, it)
+                        },
+                        label = { Text(alias.replaceFirstChar(Char::uppercase)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+
+    /** Roda um comando digitado, igual ao falado. Útil para testar sem falar. */
+    @Composable
+    private fun CommandTest() {
+        val app = application as BlicoApp
+        val scope = rememberCoroutineScope()
+        var text by remember { mutableStateOf("") }
+        var result by remember { mutableStateOf<Outcome?>(null) }
+
+        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Testar um comando", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    placeholder = { Text("timer de 1 minuto") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(enabled = text.isNotBlank(), onClick = {
+                    scope.launch {
+                        val out = app.assistant.handle(text, app.execContext { startActivity(it) })
+                        result = out
+                        app.say(out.spoken)
+                    }
+                }) { Text("Executar") }
+                result?.let { Text(it.spoken, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp)) }
             }
         }
     }

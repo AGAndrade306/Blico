@@ -14,7 +14,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import app.blico.BlicoApp
 import app.blico.MainActivity
+import app.blico.core.Assistant
+import app.blico.core.ExecContext
+import app.blico.core.Outcome
+import app.blico.core.ToolCall
 import app.blico.core.TranscriptionEvent
 import app.blico.voice.ListeningState
 import app.blico.voice.OnDeviceTranscriber
@@ -25,18 +30,21 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Uma interação: abre no toque longo do botão lateral, ouve até a fala acabar e mostra o texto.
+ * Uma interação: abre no toque longo do botão lateral, ouve até a fala acabar, entende e age.
  * O microfone só abre aqui, depois do gesto, e fecha quando a sessão some.
  */
 class BlicoSession(context: Context) : VoiceInteractionSession(context) {
+    private val app = context.applicationContext as BlicoApp
     private val owner = ComposeOwner()
     private val transcriber = OnDeviceTranscriber(context)
     private lateinit var scope: CoroutineScope
-    private var listening: Job? = null
+    private var work: Job? = null
     private var root: View? = null
 
     private var state by mutableStateOf(ListeningState())
     private var needsPermission by mutableStateOf(false)
+    private var outcome by mutableStateOf<Outcome?>(null)
+    private var thinking by mutableStateOf(false)
 
     override fun onCreate() {
         super.onCreate()
@@ -51,7 +59,11 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
             AssistantOverlay(
                 state = state,
                 needsPermission = needsPermission,
+                thinking = thinking,
+                outcome = outcome,
                 onRetry = ::startListening,
+                onChoose = { call -> act { assistant, ctx -> assistant.execute(call, ctx) } },
+                onConfirm = { call -> act { assistant, ctx -> assistant.execute(call, ctx, confirmed = true) } },
                 onOpenSetup = ::openSetup,
                 onClose = ::finish,
             )
@@ -66,38 +78,56 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
     }
 
     override fun onHide() {
-        stopListening()
+        cancelWork()
         owner.onHide()
         super.onHide()
     }
 
     override fun onDestroy() {
-        stopListening()
+        cancelWork()
         scope.cancel()
         owner.onDestroy()
         super.onDestroy()
     }
 
     private fun startListening() {
-        stopListening()
+        cancelWork()
+        app.speech.stop() // o gesto interrompe a fala, e o microfone não ouve o próprio Blico
         state = ListeningState()
+        outcome = null
         needsPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
         if (needsPermission) return
 
-        listening = scope.launch {
+        work = scope.launch {
             transcriber.listen().collect { event ->
                 if (event is TranscriptionEvent.Listening) {
                     root?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                 }
                 state = state.reduce(event)
+                if (event is TranscriptionEvent.Final) {
+                    act { assistant, ctx -> assistant.handle(event.text, ctx) }
+                }
             }
         }
     }
 
-    private fun stopListening() {
-        listening?.cancel()
-        listening = null
+    /** Roda um passo do assistente e reage ao resultado. */
+    private fun act(step: suspend (Assistant, ExecContext) -> Outcome) {
+        scope.launch {
+            thinking = true
+            val out = step(app.assistant, app.execContext { context.startActivity(it) })
+            thinking = false
+            outcome = out
+            app.say(out.spoken)
+            // Ação feita: o app alvo já está abrindo por trás, então o cartão sai da frente.
+            if (out is Outcome.Done) finish()
+        }
+    }
+
+    private fun cancelWork() {
+        work?.cancel()
+        work = null
     }
 
     private fun openSetup() {
@@ -107,3 +137,10 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
         finish()
     }
 }
+
+/** Atalho para o cartão: as opções de escolha e a chamada a confirmar. */
+internal val Outcome.choices: List<Pair<String, ToolCall>>
+    get() = when (this) {
+        is Outcome.Choose -> options.map { it.label to it.call }
+        else -> emptyList()
+    }
