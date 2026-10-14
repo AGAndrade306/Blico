@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acessibilidade_nome">Blico: enviar no WhatsApp</string>
+    <string name="acessibilidade_descricao">Toca em enviar no WhatsApp depois que você confirma a mensagem no cartão do Blico. Só age no WhatsApp, só na conversa que o Blico abriu e só se o texto na tela for o que você confirmou. Não lê nem guarda suas conversas.</string>
+</resources>

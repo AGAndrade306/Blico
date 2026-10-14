@@ -76,3 +76,15 @@ André não gostou do rosa nem dos cantos de pílula e pediu algo mais próximo 
 - **Uma cor de destaque só:** o verde do logo. O rosa saiu da interface; continua só no logo e no ícone, que são do André.
 - **Inter no lugar de SF Pro:** a SF só pode ser usada em plataformas da Apple. A Inter (OFL) tem o mesmo desenho e foi empacotada em quatro pesos, cortada para o alfabeto latino. A escala segue a do iOS: título grande 34, título 22, destaque 17, texto 17, nota 13.
 - Os componentes ficam em `app/ui/Theme.kt` (`BlicoTheme`, `BlicoCard`, `BlicoButton`, `BlicoChip`, `BlicoMark`, `BlicoProgress`, `LargeTitle`).
+
+## 2026-10-14 — Ligar e enviar no WhatsApp até o fim (Etapa 4)
+
+André pediu para não ter que tocar em "enviar" no WhatsApp nem no botão de ligar.
+
+- **Um toque continua obrigatório, no cartão Confirmar do Blico** (regra 2). Ele substitui o toque no app: o cartão mostra o nome, o número e a mensagem, todos tirados da chamada estruturada (`Tool.summarize`), e só depois disso o Blico liga ou envia.
+- **Duas ferramentas de classe 2 que os modelos não enxergam:** `whatsapp_enviar` e `ligar_agora`. Elas só nascem de `whatsapp_preparar` e `ligar` depois que o contato vira um número (`ToolResult.Then`), e o passo seguinte passa pela `RiskPolicy` como qualquer chamada. Um passo só, sem encadear mais.
+- **Ligação pelo `TelecomManager.placeCall`, com a permissão `CALL_PHONE`.** O Blico não precisa ser o app de telefone padrão para começar uma ligação; ser o discador padrão só serviria para atender ou trocar a tela de chamada, o que não foi pedido. Sem a permissão, o número vai para o discador, como antes.
+- **WhatsApp pela acessibilidade, com escopo mínimo.** O WhatsApp não tem API para enviar de um app pessoal; o caminho é abrir a conversa pelo link oficial (`api.whatsapp.com/send`, com o texto) e tocar em enviar. O serviço `BlicoAccessibilityService` só recebe eventos do WhatsApp, só age numa conversa que o Blico acabou de abrir, só toca se o texto na caixa for exatamente o confirmado (`DirectSend.sameText`) e confere que a caixa esvaziou. O texto da tela nunca vai para um modelo.
+- **Botão enviar pelo id `com.whatsapp:id/send`**, com a descrição "Enviar" como reserva, e a caixa pelo id `com.whatsapp:id/entry`. São os ids públicos do WhatsApp há anos; se mudarem, o Blico não envia e deixa a mensagem pronta, avisando por voz.
+- **Ligado por padrão quando a pessoa libera** (permissão ou acessibilidade), com a opção "Só deixar pronto" no cartão da tela inicial.
+- **No Android 13+ um APK instalado fora da loja precisa de "Permitir configurações restritas"** antes de ligar a acessibilidade; a tela explica o caminho.

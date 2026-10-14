@@ -1,18 +1,32 @@
 package app.blico.executor
 
+import android.Manifest
 import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Bundle
 import android.provider.AlarmClock
+import android.telecom.TelecomManager
 import app.blico.core.DeviceAction
 import app.blico.core.DeviceGateway
 import app.blico.core.DeviceResult
+import app.blico.executor.BlicoAccessibilityService.SendStep
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.net.URLEncoder
 import java.text.Normalizer
 
-/** Backend 1 da arquitetura: intents e deep links. Abre telas, não toca em nada dentro dos apps. */
+/**
+ * Backend 1 da arquitetura: intents e deep links. Abre telas e, depois do Confirmar,
+ * completa ligações e toca em enviar no WhatsApp (pela [BlicoAccessibilityService]).
+ */
 class AndroidDeviceGateway(
     private val context: Context,
     /** Quem inicia as activities. Na sessão do assistente é o startActivity dela. */
@@ -24,7 +38,9 @@ class AndroidDeviceGateway(
             is DeviceAction.OpenUri -> openUri(action)
             is DeviceAction.LaunchPackage -> launchPackage(action.packageName)
             is DeviceAction.LaunchByName -> launchByName(action.name)
-            is DeviceAction.Dial -> start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + action.number.filter { it.isDigit() || it == '+' })))
+            is DeviceAction.Dial -> start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + dialable(action.number))))
+            is DeviceAction.Call -> call(action.number)
+            is DeviceAction.SendWhatsApp -> sendWhatsApp(action)
             is DeviceAction.SetAlarm -> start(
                 Intent(AlarmClock.ACTION_SET_ALARM)
                     .putExtra(AlarmClock.EXTRA_HOUR, action.hour)
@@ -65,6 +81,46 @@ class AndroidDeviceGateway(
         val pkg = action.packageName
         if (pkg != null && !isInstalled(pkg)) return DeviceResult.NotInstalled(appLabel(action))
         return start(Intent(Intent.ACTION_VIEW, Uri.parse(action.uri)).apply { pkg?.let(::setPackage) })
+    }
+
+    /** Liga pelo Telecom, sem passar pelo discador. Só com a permissão de fazer chamadas. */
+    private fun call(number: String): DeviceResult {
+        if (context.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            return DeviceResult.Failed("sem permissão de fazer chamadas")
+        }
+        context.getSystemService(TelecomManager::class.java)
+            .placeCall(Uri.fromParts("tel", dialable(number), null), Bundle())
+        return DeviceResult.Done
+    }
+
+    /**
+     * Abre a conversa com o texto na caixa e espera a acessibilidade tocar em enviar.
+     * Sem o serviço, ou se o texto na tela não for o confirmado, a conversa fica aberta e pronta.
+     */
+    private suspend fun sendWhatsApp(action: DeviceAction.SendWhatsApp): DeviceResult = sending.withLock {
+        if (!isInstalled(WHATSAPP)) return DeviceResult.NotInstalled("WhatsApp")
+        val text = URLEncoder.encode(action.text, Charsets.UTF_8).replace("+", "%20")
+        start(Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${action.phone}&text=$text")).setPackage(WHATSAPP))
+        val service = BlicoAccessibilityService.current ?: return DeviceResult.Failed("acessibilidade do Blico desligada")
+        withContext(Dispatchers.Default) {
+            var why = "o WhatsApp não abriu"
+            val tapped = withTimeoutOrNull(SEND_TIMEOUT_MS) {
+                var step = service.tapSend(action.text)
+                while (step is SendStep.NotYet) {
+                    why = step.why
+                    delay(POLL_MS)
+                    step = service.tapSend(action.text)
+                }
+                true
+            } ?: false
+            if (!tapped) return@withContext DeviceResult.Failed("não enviei: $why")
+            // A caixa esvazia quando a mensagem sai.
+            val left = withTimeoutOrNull(CONFIRM_TIMEOUT_MS) {
+                while (!service.sent(action.text)) delay(POLL_MS)
+                true
+            } ?: false
+            if (left) DeviceResult.Done else DeviceResult.Failed("toquei em enviar, mas a mensagem continuou na caixa")
+        }
     }
 
     private fun launchPackage(pkg: String): DeviceResult {
@@ -149,7 +205,8 @@ class AndroidDeviceGateway(
         is DeviceAction.ShareText -> action.packageName?.let { KNOWN_LABELS[it] ?: it } ?: "app"
         is DeviceAction.LaunchPackage -> KNOWN_LABELS[action.packageName] ?: action.packageName
         is DeviceAction.LaunchByName -> action.name
-        is DeviceAction.Dial -> "discador"
+        is DeviceAction.Dial, is DeviceAction.Call -> "discador"
+        is DeviceAction.SendWhatsApp -> "WhatsApp"
         is DeviceAction.SetAlarm, is DeviceAction.SetTimer -> "app de relógio"
         is DeviceAction.WebSearch -> "navegador"
         is DeviceAction.OpenFile -> "app para abrir esse arquivo"
@@ -157,6 +214,16 @@ class AndroidDeviceGateway(
     }
 
     private companion object {
+        const val WHATSAPP = "com.whatsapp"
+        const val SEND_TIMEOUT_MS = 8_000L
+        const val CONFIRM_TIMEOUT_MS = 3_000L
+        const val POLL_MS = 250L
+
+        /** Um envio por vez, para dois pedidos seguidos não tocarem na mesma tela. */
+        val sending = Mutex()
+
+        fun dialable(number: String) = number.filter { it.isDigit() || it == '+' }
+
         val KNOWN_LABELS = mapOf(
             "com.whatsapp" to "WhatsApp",
             "com.ubercab" to "Uber",

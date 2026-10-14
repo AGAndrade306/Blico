@@ -180,6 +180,7 @@ class MainActivity : ComponentActivity() {
             Section("Personalizar")
             VoiceSettings()
             Places()
+            DirectActionsCard(application as BlicoApp, tick)
             LocalModelCard(application as BlicoApp)
             Cloud()
 

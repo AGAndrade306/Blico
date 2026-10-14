@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Ligar direto depois do Confirmar, sem passar pelo discador. -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <!-- Busca de arquivos: sem isso o MediaStore só mostra fotos e vídeos, não PDFs e documentos.
          O Blico não vai para a Play Store, então a política de uso dessa permissão não se aplica. -->

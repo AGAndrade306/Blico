@@ -1,12 +1,15 @@
 package app.blico
 
+import android.Manifest
 import android.app.Application
 import android.content.Intent
+import android.content.pm.PackageManager
 import app.blico.brain.HttpCloudTransport
 import app.blico.brain.LiteRtLocalProvider
 import app.blico.brain.ModelStore
 import app.blico.core.Assistant
 import app.blico.core.CloudProvider
+import app.blico.core.DirectActions
 import app.blico.core.ExecContext
 import app.blico.core.OptionalProvider
 import app.blico.core.RedactingProvider
@@ -14,6 +17,7 @@ import app.blico.core.RuleRouter
 import app.blico.core.ToolRegistry
 import app.blico.core.tools.builtinTools
 import app.blico.executor.AndroidDeviceGateway
+import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
 import app.blico.memory.AndroidContactDirectory
 import app.blico.memory.PrefsPlaceBook
@@ -104,11 +108,29 @@ class BlicoApp : Application() {
         scope.launch { speech.speak(text) }
     }
 
+    private val directPrefs by lazy { getSharedPreferences("direto", MODE_PRIVATE) }
+
+    /** Enviar no WhatsApp até o fim, depois do Confirmar. Vale quando a acessibilidade está ligada. */
+    var directWhatsApp: Boolean
+        get() = directPrefs.getBoolean("whatsapp", true)
+        set(v) = directPrefs.edit().putBoolean("whatsapp", v).apply()
+
+    /** Completar a ligação depois do Confirmar. Vale quando a permissão de ligar foi dada. */
+    var directCalls: Boolean
+        get() = directPrefs.getBoolean("ligar", true)
+        set(v) = directPrefs.edit().putBoolean("ligar", v).apply()
+
+    val accessibilityOn: Boolean get() = BlicoAccessibilityService.isEnabled(this)
+    val canCall: Boolean get() = checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
+
+    fun directActions() = DirectActions(whatsapp = directWhatsApp && accessibilityOn, calls = directCalls && canCall)
+
     fun execContext(launcher: (Intent) -> Unit = { startActivity(it) }) = ExecContext(
         requestId = UUID.randomUUID().toString(),
         device = AndroidDeviceGateway(this, launcher),
         contacts = contacts,
         places = places,
         files = files,
+        direct = directActions(),
     )
 }

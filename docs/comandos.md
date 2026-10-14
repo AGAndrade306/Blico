@@ -4,9 +4,9 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 
 | Você fala | O que acontece |
 | --- | --- |
-| "manda pro João que eu chego em 10 minutos" | Abre a conversa do João no WhatsApp com o texto pronto. Você toca em enviar. |
+| "manda pro João que eu chego em 10 minutos" | Mostra o cartão com o João, o número e a mensagem. Você toca em Confirmar e o Blico envia. Sem a acessibilidade ligada (ou com "Só deixar pronto"), abre a conversa com o texto e você toca em enviar. |
 | "manda mensagem pra Ana" | Abre a conversa da Ana. Se houver duas Anas, o cartão pergunta qual. |
-| "liga pra mãe" | Abre o discador com o número. Você toca para ligar. |
+| "liga pra mãe" | Mostra o cartão com o nome e o número. Você toca em Confirmar e a ligação começa. Sem a permissão de ligar (ou com "Só deixar pronto"), abre o discador com o número. |
 | "pede um uber pra casa" | Abre o Uber com o destino preenchido (cadastre casa e trabalho no app). |
 | "chama um 99" | Abre o 99. |
 | "pede uma pizza no iFood" | Abre o iFood. |
