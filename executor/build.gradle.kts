@@ -25,5 +25,5 @@ kotlin {
 
 dependencies {
     api(project(":core"))
-    implementation(libs.coroutines.core)
+    implementation(libs.coroutines.android)
 }

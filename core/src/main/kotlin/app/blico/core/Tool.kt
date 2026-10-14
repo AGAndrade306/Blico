@@ -16,10 +16,20 @@ sealed interface ToolResult {
     data class Success(val spoken: String) : ToolResult
 
     data class Failure(val reason: String, val spoken: String) : ToolResult
+
+    /** Ambíguo: o usuário escolhe uma das [options], cada uma já é a chamada completa. */
+    data class NeedsChoice(val question: String, val options: List<Choice>) : ToolResult
+
+    data class Choice(val label: String, val call: ToolCall)
 }
 
-/** Contexto de uma execução. Cresce conforme os módulos entram. */
-data class ExecContext(val requestId: String)
+/** O que uma ferramenta precisa do mundo lá fora. No app são implementações Android; nos testes, fakes. */
+data class ExecContext(
+    val requestId: String,
+    val device: DeviceGateway,
+    val contacts: ContactDirectory,
+    val places: PlaceBook,
+)
 
 interface Tool {
     val name: String
