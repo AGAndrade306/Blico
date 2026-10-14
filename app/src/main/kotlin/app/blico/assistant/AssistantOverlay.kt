@@ -32,11 +32,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.painterResource
 import app.blico.R
 import app.blico.core.Outcome
-import app.blico.ui.LocalRiso
-import app.blico.ui.RisoButton
-import app.blico.ui.RisoCard
-import app.blico.ui.RisoLink
-import app.blico.ui.RisoTheme
+import app.blico.ui.LocalBlico
+import app.blico.ui.BlicoButton
+import app.blico.ui.BlicoCard
+import app.blico.ui.BlicoLink
+import app.blico.ui.BlicoTheme
 import app.blico.core.ToolCall
 import app.blico.voice.ListeningState
 import app.blico.voice.ListeningState.Phase
@@ -54,8 +54,8 @@ internal fun AssistantOverlay(
     onOpenSetup: () -> Unit,
     onClose: () -> Unit,
 ) {
-    RisoTheme {
-        val p = LocalRiso.current
+    BlicoTheme {
+        val p = LocalBlico.current
         // Tocar fora do cartão fecha o Blico.
         Box(
             modifier = Modifier
@@ -65,10 +65,9 @@ internal fun AssistantOverlay(
                 .safeDrawingPadding(),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            RisoCard(
-                shape = RoundedCornerShape(30.dp),
-                shadow = 6.dp,
-                contentPadding = PaddingValues(22.dp),
+            BlicoCard(
+                shape = RoundedCornerShape(20.dp),
+                contentPadding = PaddingValues(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp)
@@ -80,14 +79,14 @@ internal fun AssistantOverlay(
                         Spacer(Modifier.height(8.dp))
                         Text("Abra o app uma vez para liberar a permissão.", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(16.dp))
-                        RisoButton("Abrir o Blico", onClick = onOpenSetup)
+                        BlicoButton("Abrir o Blico", onClick = onOpenSetup)
                         return@Column
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(painterResource(R.drawable.blico_logo), contentDescription = null, modifier = Modifier.size(30.dp))
                         Spacer(Modifier.size(10.dp))
-                        Text(state.label, style = MaterialTheme.typography.titleMedium, color = p.green, modifier = Modifier.weight(1f))
+                        Text(state.label, style = MaterialTheme.typography.titleMedium, color = p.text, modifier = Modifier.weight(1f))
                         StatusDot(state.phase)
                     }
 
@@ -126,7 +125,7 @@ internal fun AssistantOverlay(
                             Spacer(Modifier.height(8.dp))
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 out.choices.forEach { (label, call) ->
-                                    RisoButton(label, onClick = { onChoose(call) }, primary = false)
+                                    BlicoButton(label, onClick = { onChoose(call) }, primary = false)
                                 }
                             }
                         }
@@ -140,12 +139,12 @@ internal fun AssistantOverlay(
                             Spacer(Modifier.height(10.dp))
                             out.summary.fields.forEach { (k, v) ->
                                 Row(Modifier.padding(vertical = 2.dp)) {
-                                    Text(k, style = MaterialTheme.typography.labelLarge, color = p.green, modifier = Modifier.width(64.dp))
+                                    Text(k, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.width(64.dp))
                                     Text(v, style = MaterialTheme.typography.bodyMedium, color = p.text)
                                 }
                             }
                             Spacer(Modifier.height(12.dp))
-                            RisoButton("Confirmar", onClick = { onConfirm(out.call) })
+                            BlicoButton("Confirmar", onClick = { onConfirm(out.call) })
                         }
                     }
 
@@ -153,10 +152,10 @@ internal fun AssistantOverlay(
                     if (finished) {
                         Spacer(Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            RisoButton("Falar de novo", onClick = onRetry)
-                            RisoLink("Fechar", onClick = onClose)
+                            BlicoButton("Falar de novo", onClick = onRetry)
+                            BlicoLink("Fechar", onClick = onClose)
                             if (state.phase == Phase.FAILED) {
-                                RisoLink("Configurar", onClick = onOpenSetup)
+                                BlicoLink("Configurar", onClick = onOpenSetup)
                             }
                         }
                     }
@@ -168,11 +167,11 @@ internal fun AssistantOverlay(
 
 @Composable
 private fun StatusDot(phase: Phase) {
-    val p = LocalRiso.current
+    val p = LocalBlico.current
     val color = when (phase) {
-        Phase.LISTENING, Phase.HEARING -> p.pink
+        Phase.LISTENING, Phase.HEARING -> p.green
         Phase.FAILED -> p.danger
-        else -> p.green
+        else -> p.muted
     }
     Box(
         Modifier

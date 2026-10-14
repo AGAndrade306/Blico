@@ -1,39 +1,31 @@
 package app.blico
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.blico.brain.LocalModel
 import app.blico.brain.ModelDownload
 import app.blico.core.Benchmark
-import app.blico.ui.LocalRiso
-import app.blico.ui.RisoButton
-import app.blico.ui.RisoCard
-import app.blico.ui.RisoChip
-import app.blico.ui.grain
+import app.blico.ui.BlicoButton
+import app.blico.ui.BlicoCard
+import app.blico.ui.BlicoProgress
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -59,7 +51,7 @@ fun LocalModelCard(app: BlicoApp) {
     val installed = remember(refresh, download) { LocalModel.entries.filter(app.models::isInstalled).toSet() }
     val selected = remember(refresh, download) { app.models.selected?.takeIf { it in installed } }
 
-    RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Column {
             Text((if (selected != null) "✓ " else "○ ") + "Cérebro no celular", style = MaterialTheme.typography.titleMedium)
             Text(
@@ -77,7 +69,7 @@ fun LocalModelCard(app: BlicoApp) {
                 val running = (download as? ModelDownload.Running)?.takeIf { it.model == model }
                 when {
                     running != null -> {
-                        Progress(running.done.toFloat() / running.total.coerceAtLeast(1))
+                        BlicoProgress(running.done.toFloat() / running.total.coerceAtLeast(1), Modifier.padding(top = 8.dp, bottom = 4.dp))
                         Text(
                             if (running.waitingForWifi) {
                                 "Esperando o Wi-Fi para continuar"
@@ -86,20 +78,20 @@ fun LocalModelCard(app: BlicoApp) {
                             },
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        RisoButton("Cancelar", primary = false, onClick = {
+                        BlicoButton("Cancelar", primary = false, onClick = {
                             app.models.cancel()
                             download = ModelDownload.Idle
                         })
                     }
                     model in installed -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                         if (model != selected) {
-                            RisoButton("Usar este", onClick = {
+                            BlicoButton("Usar este", onClick = {
                                 app.models.selected = model
                                 scope.launch { app.local.unload() }
                                 refresh++
                             })
                         }
-                        RisoButton("Apagar", primary = false, onClick = {
+                        BlicoButton("Apagar", primary = false, onClick = {
                             scope.launch {
                                 app.local.unload()
                                 app.models.delete(model)
@@ -107,7 +99,7 @@ fun LocalModelCard(app: BlicoApp) {
                             }
                         })
                     }
-                    else -> RisoButton(
+                    else -> BlicoButton(
                         "Baixar",
                         enabled = download !is ModelDownload.Running,
                         modifier = Modifier.padding(top = 6.dp),
@@ -136,7 +128,7 @@ fun LocalBenchmarkCard(app: BlicoApp) {
     var misses by remember { mutableStateOf<List<String>>(emptyList()) }
     val ready = app.local.isReady()
 
-    RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Column {
             Text("Benchmark do cérebro no celular", style = MaterialTheme.typography.titleMedium)
             Text(
@@ -149,7 +141,7 @@ fun LocalBenchmarkCard(app: BlicoApp) {
             )
             Spacer(Modifier.height(8.dp))
             if (job == null) {
-                RisoButton("Rodar benchmark", enabled = ready, onClick = {
+                BlicoButton("Rodar benchmark", enabled = ready, onClick = {
                     summary = null
                     misses = emptyList()
                     job = scope.launch {
@@ -170,7 +162,7 @@ fun LocalBenchmarkCard(app: BlicoApp) {
                 })
             } else {
                 Text("Rodando: $progress", style = MaterialTheme.typography.bodyMedium)
-                RisoButton("Parar", primary = false, onClick = { job?.cancel() })
+                BlicoButton("Parar", primary = false, onClick = { job?.cancel() })
             }
             summary?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
             if (misses.isNotEmpty()) {
@@ -178,30 +170,6 @@ fun LocalBenchmarkCard(app: BlicoApp) {
                 misses.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
             }
         }
-    }
-}
-
-/** Barra de progresso em duas tintas: contorno verde, preenchimento rosa. */
-@Composable
-private fun Progress(fraction: Float) {
-    val p = LocalRiso.current
-    val shape = RoundedCornerShape(50)
-    Box(
-        Modifier
-            .padding(top = 6.dp)
-            .fillMaxWidth()
-            .height(14.dp)
-            .clip(shape)
-            .background(p.card)
-            .border(2.dp, p.green, shape),
-    ) {
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                .background(p.pink)
-                .grain(0.8f),
-        )
     }
 }
 

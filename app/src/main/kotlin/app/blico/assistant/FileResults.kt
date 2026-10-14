@@ -1,5 +1,7 @@
 package app.blico.assistant
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,24 +22,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
-import app.blico.ui.Display
-import app.blico.ui.LocalRiso
-import app.blico.ui.RisoButton
-import app.blico.ui.RisoLink
-import app.blico.ui.grain
+import app.blico.ui.LocalBlico
+import app.blico.ui.BlicoButton
+import app.blico.ui.BlicoLink
 import app.blico.core.FileItem
 import app.blico.core.FileKind
 import app.blico.core.ToolCall
@@ -80,7 +79,7 @@ internal fun FileResults(items: List<FileItem>, onAction: (ToolCall) -> Unit) {
                                 .filter { it.isNotEmpty() }
                                 .joinToString(" · "),
                             style = MaterialTheme.typography.labelSmall,
-                            color = LocalRiso.current.muted,
+                            color = LocalBlico.current.muted,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -93,17 +92,17 @@ internal fun FileResults(items: List<FileItem>, onAction: (ToolCall) -> Unit) {
                         RenameField(file) { newName ->
                             onAction(ToolCall("arquivo_renomear", args + ("novo_nome" to newName)))
                         }
-                        RisoLink("Cancelar", onClick = { renaming = null })
+                        BlicoLink("Cancelar", onClick = { renaming = null })
                     } else {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            RisoButton("Abrir", onClick = { onAction(ToolCall("arquivo_abrir", args)) })
-                            RisoButton("Compartilhar", onClick = { onAction(ToolCall("arquivo_compartilhar", args)) }, primary = false)
-                            RisoButton("Renomear", onClick = { renaming = file.id }, primary = false)
+                            BlicoButton("Abrir", onClick = { onAction(ToolCall("arquivo_abrir", args)) })
+                            BlicoButton("Compartilhar", onClick = { onAction(ToolCall("arquivo_compartilhar", args)) }, primary = false)
+                            BlicoButton("Renomear", onClick = { renaming = file.id }, primary = false)
                         }
                     }
                 }
             }
-            HorizontalDivider(thickness = 1.5.dp, color = LocalRiso.current.green.copy(alpha = 0.25f))
+            HorizontalDivider(thickness = 0.5.dp, color = LocalBlico.current.separator)
         }
     }
 }
@@ -123,13 +122,13 @@ private fun RenameField(file: FileItem, onSubmit: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.size(8.dp))
-    RisoButton("Renomear", onClick = submit, enabled = name.isNotBlank())
+    BlicoButton("Renomear", onClick = submit, enabled = name.isNotBlank())
 }
 
 /** Selo do tipo, impresso em rosa: mais legível que um emoji e no mesmo estilo do resto. */
 @Composable
 private fun KindBadge(kind: FileKind) {
-    val p = LocalRiso.current
+    val p = LocalBlico.current
     val label = when (kind) {
         FileKind.IMAGEM -> "IMG"
         FileKind.VIDEO -> "VÍD"
@@ -143,12 +142,11 @@ private fun KindBadge(kind: FileKind) {
     Box(
         Modifier
             .size(width = 46.dp, height = 40.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(p.pink)
-            .grain(),
+            .clip(RoundedCornerShape(8.dp))
+            .background(p.fill),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge.copy(fontFamily = Display), color = p.green)
+        Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = p.green)
     }
 }
 

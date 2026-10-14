@@ -67,3 +67,12 @@ O fundo escuro do modo noturno ficou difícil de ler. A tela do app usa sempre o
 - **GPU primeiro, CPU de reserva.** Se o driver recusar a GPU, o motor carrega na CPU. O modelo começa a carregar quando o cartão abre, enquanto a pessoa fala.
 - **Benchmark de 100 comandos** em `core/src/main/resources/benchmark/comandos.tsv`: ações ditas de jeitos que as regras não cobrem, perguntas de conhecimento geral e perguntas que precisam de informação atual (o certo é passar a vez). Roda no app, em Testar.
 - **Kotlin 2.4.20.** O LiteRT-LM 0.18 é compilado com Kotlin 2.4 e traz o `kotlin-stdlib` 2.4; o compilador 2.2 não lê esses metadados.
+
+## 2026-10-14 — Visual no padrão Apple (substitui a risografia)
+
+André não gostou do rosa nem dos cantos de pílula e pediu algo mais próximo da Apple.
+
+- **Lista agrupada do iOS:** fundo `#F2F2F7`, cartões brancos sem borda nem sombra, cantos de 12 dp (20 dp no cartão do agente), botões retangulares de cantos suaves. No escuro, preto e `#1C1C1E`.
+- **Uma cor de destaque só:** o verde do logo. O rosa saiu da interface; continua só no logo e no ícone, que são do André.
+- **Inter no lugar de SF Pro:** a SF só pode ser usada em plataformas da Apple. A Inter (OFL) tem o mesmo desenho e foi empacotada em quatro pesos, cortada para o alfabeto latino. A escala segue a do iOS: título grande 34, título 22, destaque 17, texto 17, nota 13.
+- Os componentes ficam em `app/ui/Theme.kt` (`BlicoTheme`, `BlicoCard`, `BlicoButton`, `BlicoChip`, `BlicoMark`, `BlicoProgress`, `LargeTitle`).
