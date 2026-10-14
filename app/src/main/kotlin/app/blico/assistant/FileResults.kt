@@ -15,13 +15,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +29,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import app.blico.ui.Display
+import app.blico.ui.LocalRiso
+import app.blico.ui.RisoButton
+import app.blico.ui.RisoLink
+import app.blico.ui.grain
 import app.blico.core.FileItem
 import app.blico.core.FileKind
 import app.blico.core.ToolCall
@@ -65,7 +71,7 @@ internal fun FileResults(items: List<FileItem>, onAction: (ToolCall) -> Unit) {
                     .padding(vertical = 10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(icon(file.kind), style = MaterialTheme.typography.titleLarge)
+                    KindBadge(file.kind)
                     Spacer(Modifier.size(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(file.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -74,7 +80,7 @@ internal fun FileResults(items: List<FileItem>, onAction: (ToolCall) -> Unit) {
                                 .filter { it.isNotEmpty() }
                                 .joinToString(" · "),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = LocalRiso.current.muted,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -87,17 +93,17 @@ internal fun FileResults(items: List<FileItem>, onAction: (ToolCall) -> Unit) {
                         RenameField(file) { newName ->
                             onAction(ToolCall("arquivo_renomear", args + ("novo_nome" to newName)))
                         }
-                        TextButton(onClick = { renaming = null }) { Text("Cancelar") }
+                        RisoLink("Cancelar", onClick = { renaming = null })
                     } else {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { onAction(ToolCall("arquivo_abrir", args)) }) { Text("Abrir") }
-                            OutlinedButton(onClick = { onAction(ToolCall("arquivo_compartilhar", args)) }) { Text("Compartilhar") }
-                            OutlinedButton(onClick = { renaming = file.id }) { Text("Renomear") }
+                            RisoButton("Abrir", onClick = { onAction(ToolCall("arquivo_abrir", args)) })
+                            RisoButton("Compartilhar", onClick = { onAction(ToolCall("arquivo_compartilhar", args)) }, primary = false)
+                            RisoButton("Renomear", onClick = { renaming = file.id }, primary = false)
                         }
                     }
                 }
             }
-            HorizontalDivider()
+            HorizontalDivider(thickness = 1.5.dp, color = LocalRiso.current.green.copy(alpha = 0.25f))
         }
     }
 }
@@ -117,18 +123,33 @@ private fun RenameField(file: FileItem, onSubmit: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.size(8.dp))
-    Button(onClick = submit, enabled = name.isNotBlank()) { Text("Renomear") }
+    RisoButton("Renomear", onClick = submit, enabled = name.isNotBlank())
 }
 
-private fun icon(kind: FileKind) = when (kind) {
-    FileKind.IMAGEM -> "🖼️"
-    FileKind.VIDEO -> "🎬"
-    FileKind.AUDIO -> "🎵"
-    FileKind.PDF -> "📕"
-    FileKind.DOCUMENTO -> "📝"
-    FileKind.PLANILHA -> "📊"
-    FileKind.APRESENTACAO -> "📽️"
-    FileKind.OUTRO -> "📄"
+/** Selo do tipo, impresso em rosa: mais legível que um emoji e no mesmo estilo do resto. */
+@Composable
+private fun KindBadge(kind: FileKind) {
+    val p = LocalRiso.current
+    val label = when (kind) {
+        FileKind.IMAGEM -> "IMG"
+        FileKind.VIDEO -> "VÍD"
+        FileKind.AUDIO -> "ÁUD"
+        FileKind.PDF -> "PDF"
+        FileKind.DOCUMENTO -> "DOC"
+        FileKind.PLANILHA -> "XLS"
+        FileKind.APRESENTACAO -> "PPT"
+        FileKind.OUTRO -> "ARQ"
+    }
+    Box(
+        Modifier
+            .size(width = 46.dp, height = 40.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(p.pink)
+            .grain(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge.copy(fontFamily = Display), color = p.green)
+    }
 }
 
 private val PT_BR: Locale = Locale.forLanguageTag("pt-BR")

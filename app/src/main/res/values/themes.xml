@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fundo de papel desde o primeiro quadro, sem o branco antes do Compose desenhar. -->
+    <style name="Theme.Blico" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/riso_papel</item>
+    </style>
+</resources>

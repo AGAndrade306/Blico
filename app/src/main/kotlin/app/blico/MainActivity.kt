@@ -14,9 +14,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.sp
+import app.blico.ui.LocalRiso
+import app.blico.ui.RisoButton
+import app.blico.ui.RisoCard
+import app.blico.ui.RisoChip
+import app.blico.ui.RisoMark
+import app.blico.ui.RisoTheme
+import app.blico.ui.RisoTitle
+import app.blico.ui.grain
+import app.blico.ui.paper
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
@@ -27,18 +47,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,8 +79,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-                Surface(Modifier.fillMaxSize()) {
+            RisoTheme {
+                Box(Modifier.fillMaxSize().paper()) {
                     SetupScreen(resumeTick)
                 }
             }
@@ -107,19 +119,16 @@ class MainActivity : ComponentActivity() {
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
         ) {
-            Text("Blico", style = MaterialTheme.typography.headlineMedium)
-            Text(
-                "Assistente que roda no seu celular. Configure os passos abaixo.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(16.dp))
+            val steps = listOf(micGranted, onDevice, isAssistant, contactsGranted, Environment.isExternalStorageManager())
+            Header(ready = steps.count { it }, total = steps.size)
+            Section("Preparar")
 
             Step(
                 title = "1. Microfone",
                 done = micGranted,
                 detail = "Só abre depois do seu gesto, nunca fica ouvindo.",
             ) {
-                Button(onClick = { askMic.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Permitir microfone") }
+                RisoButton("Permitir microfone", onClick = { askMic.launch(Manifest.permission.RECORD_AUDIO) })
             }
 
             Step(
@@ -131,7 +140,7 @@ class MainActivity : ComponentActivity() {
                     "Indisponível neste aparelho. Instale ou atualize o app de reconhecimento de fala do sistema."
                 },
             ) {
-                OutlinedButton(onClick = { transcriber.requestLanguageDownload() }) { Text("Baixar português") }
+                RisoButton("Baixar português", onClick = { transcriber.requestLanguageDownload() }, primary = false)
             }
 
             Step(
@@ -139,7 +148,7 @@ class MainActivity : ComponentActivity() {
                 done = isAssistant,
                 detail = "Em Apps padrão › App de assistente digital, escolha o Blico.",
             ) {
-                Button(onClick = ::openDefaultApps) { Text("Abrir Apps padrão") }
+                RisoButton("Abrir Apps padrão", onClick = ::openDefaultApps)
             }
 
             Step(
@@ -147,7 +156,7 @@ class MainActivity : ComponentActivity() {
                 done = null,
                 detail = "Configurações › Recursos avançados › Botão lateral › Pressionar e segurar › Ativar assistente digital.",
             ) {
-                OutlinedButton(onClick = ::openSideKeySettings) { Text("Abrir Configurações") }
+                RisoButton("Abrir Configurações", onClick = ::openSideKeySettings, primary = false)
             }
 
             Step(
@@ -155,7 +164,7 @@ class MainActivity : ComponentActivity() {
                 done = contactsGranted,
                 detail = "Para achar o número quando você diz \"manda pro João\". A agenda não sai do celular.",
             ) {
-                Button(onClick = { askContacts.launch(Manifest.permission.READ_CONTACTS) }) { Text("Permitir contatos") }
+                RisoButton("Permitir contatos", onClick = { askContacts.launch(Manifest.permission.READ_CONTACTS) })
             }
 
             Step(
@@ -163,34 +172,78 @@ class MainActivity : ComponentActivity() {
                 done = Environment.isExternalStorageManager(),
                 detail = "Para \"acha o pdf do contrato\" e \"fotos de ontem\". A busca é feita no celular e nada sai dele.",
             ) {
-                Button(onClick = ::openAllFilesAccess) { Text("Liberar acesso aos arquivos") }
+                RisoButton("Liberar acesso aos arquivos", onClick = ::openAllFilesAccess)
             }
 
+            Section("Personalizar")
+            VoiceSettings()
             Places()
             Cloud()
-            VoiceSettings()
 
-            Spacer(Modifier.height(8.dp))
-            ListenTest(transcriber, enabled = micGranted)
+            Section("Testar")
             CommandTest()
+            ListenTest(transcriber, enabled = micGranted)
+            Spacer(Modifier.height(24.dp))
         }
     }
 
+    /** Logo, nome com a tinta rosa fora de registro e quantos passos já estão prontos. */
+    @Composable
+    private fun Header(ready: Int, total: Int) {
+        val p = LocalRiso.current
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+            Image(
+                painter = painterResource(R.drawable.blico_logo),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+            )
+            Spacer(Modifier.width(14.dp))
+            Column {
+                RisoTitle("Blico", style = MaterialTheme.typography.displaySmall)
+                Text("seu assistente, no seu celular", style = MaterialTheme.typography.bodyMedium, color = p.muted)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        val all = ready == total
+        Text(
+            if (all) "Tudo pronto. Segure o botão lateral e fale." else "$ready de $total passos prontos",
+            style = MaterialTheme.typography.labelLarge,
+            color = p.text,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(p.pink)
+                .grain()
+                .padding(horizontal = 14.dp, vertical = 7.dp),
+        )
+    }
+
+    /** Título de seção: pequeno, verde, com um traço rosa embaixo. */
+    @Composable
+    private fun Section(title: String) {
+        val p = LocalRiso.current
+        Spacer(Modifier.height(22.dp))
+        Text(title.uppercase(), style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 2.sp), color = p.green)
+        Box(Modifier.padding(top = 4.dp, bottom = 6.dp).width(36.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(p.pink))
+    }
+
+    /** Passo de configuração. Pronto, ele encolhe para uma linha; pendente, mostra o porquê e o botão. */
     @Composable
     private fun Step(title: String, done: Boolean?, detail: String, action: @Composable () -> Unit) {
-        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                val mark = when (done) {
-                    true -> "✓ "
-                    false -> "○ "
-                    null -> ""
-                }
-                Text(mark + title, style = MaterialTheme.typography.titleMedium)
-                Text(detail, style = MaterialTheme.typography.bodySmall)
-                if (done != true) {
-                    Spacer(Modifier.height(8.dp))
-                    action()
-                }
+        val p = LocalRiso.current
+        RisoCard(
+            Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            accent = if (done == true) p.green.copy(alpha = 0.35f) else p.pink,
+            contentPadding = if (done == true) PaddingValues(horizontal = 18.dp, vertical = 12.dp) else PaddingValues(18.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                RisoMark(done)
+            }
+            if (done != true) {
+                Spacer(Modifier.height(4.dp))
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = p.muted)
+                Spacer(Modifier.height(12.dp))
+                action()
             }
         }
     }
@@ -199,8 +252,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Places() {
         val places = (application as BlicoApp).places
-        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Column(Modifier.padding(16.dp)) {
+        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column {
                 Text("Lugares", style = MaterialTheme.typography.titleMedium)
                 Text("Usados no Uber e na navegação.", style = MaterialTheme.typography.bodySmall)
                 PrefsPlaceBook.ALIASES.forEach { alias ->
@@ -226,8 +279,8 @@ class MainActivity : ComponentActivity() {
         val app = application as BlicoApp
         var endpoint by remember { mutableStateOf(app.cloudEndpoint) }
         var token by remember { mutableStateOf(if (app.cloudToken.isEmpty()) "" else TOKEN_MASK) }
-        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Column(Modifier.padding(16.dp)) {
+        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column {
                 val ready = endpoint.startsWith("https://") && token.isNotEmpty()
                 Text((if (ready) "✓ " else "○ ") + "Nuvem", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -270,8 +323,8 @@ class MainActivity : ComponentActivity() {
         var text by remember { mutableStateOf("") }
         var result by remember { mutableStateOf<Outcome?>(null) }
 
-        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Column(Modifier.padding(16.dp)) {
+        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column {
                 Text("Testar um comando", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(
                     value = text,
@@ -281,13 +334,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
                 Spacer(Modifier.height(8.dp))
-                Button(enabled = text.isNotBlank(), onClick = {
+                RisoButton("Executar", enabled = text.isNotBlank(), onClick = {
                     scope.launch {
                         val out = app.assistant.handle(text, app.execContext { startActivity(it) })
                         result = out
                         app.say(out.spoken)
                     }
-                }) { Text("Executar") }
+                })
                 result?.let { Text(it.spoken, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp)) }
                 (result as? Outcome.Files)?.let { files ->
                     FileResults(files.items) { call ->
@@ -300,13 +353,13 @@ class MainActivity : ComponentActivity() {
                 }
                 (result as? Outcome.Confirm)?.let { confirm ->
                     confirm.summary.fields.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodyMedium) }
-                    Button(onClick = {
+                    RisoButton("Confirmar", onClick = {
                         scope.launch {
                             val out = app.assistant.execute(confirm.call, app.execContext { startActivity(it) }, confirmed = true)
                             result = out
                             app.say(out.spoken)
                         }
-                    }) { Text("Confirmar") }
+                    })
                 }
             }
         }
@@ -319,11 +372,12 @@ class MainActivity : ComponentActivity() {
         var state by remember { mutableStateOf<ListeningState?>(null) }
         var job by remember { mutableStateOf<Job?>(null) }
 
-        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Column(Modifier.padding(16.dp)) {
+        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column {
                 Text("Testar aqui", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                Button(
+                RisoButton(
+                    "Falar",
                     enabled = enabled,
                     onClick = {
                         job?.cancel()
@@ -332,7 +386,7 @@ class MainActivity : ComponentActivity() {
                             transcriber.listen().collect { state = state?.reduce(it) }
                         }
                     },
-                ) { Text("Falar") }
+                )
                 state?.let { s ->
                     Spacer(Modifier.height(8.dp))
                     Text(s.label, style = MaterialTheme.typography.labelLarge)
@@ -369,7 +423,7 @@ class MainActivity : ComponentActivity() {
     private fun openTtsSettings() = openFirst(Intent("com.android.settings.TTS_SETTINGS"), Intent(Settings.ACTION_SETTINGS))
 
     /** Motor, voz, velocidade e tom. Só aparecem vozes que funcionam sem internet. */
-    @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalLayoutApi::class)
     @Composable
     private fun VoiceSettings() {
         val app = application as BlicoApp
@@ -385,8 +439,8 @@ class MainActivity : ComponentActivity() {
             app.voicePrefs = p
         }
 
-        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Column(Modifier.padding(16.dp)) {
+        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column {
                 Text("Voz", style = MaterialTheme.typography.titleMedium)
                 Text(
                     "Escolha o motor e a voz. Só aparecem vozes que funcionam sem internet, para o que o Blico fala não sair do celular.",
@@ -397,10 +451,10 @@ class MainActivity : ComponentActivity() {
                     Text("Motor", style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         engines.forEach { e ->
-                            FilterChip(
+                            RisoChip(
+                                e.label,
                                 selected = e.packageName == currentEngine,
                                 onClick = { update(prefs.copy(engine = e.packageName, voice = null)) },
-                                label = { Text(e.label) },
                             )
                         }
                     }
@@ -415,15 +469,15 @@ class MainActivity : ComponentActivity() {
                         style = MaterialTheme.typography.bodySmall,
                     )
                     else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = prefs.voice == null, onClick = { update(prefs.copy(voice = null)) }, label = { Text("Padrão") })
+                        RisoChip("Padrão", selected = prefs.voice == null, onClick = { update(prefs.copy(voice = null)) })
                         list.forEach { v ->
-                            FilterChip(
+                            RisoChip(
+                                v.label,
                                 selected = prefs.voice == v.name,
                                 onClick = {
                                     update(prefs.copy(voice = v.name))
                                     app.say("Oi, eu sou o Blico. Essa é a minha voz.")
                                 },
-                                label = { Text(v.label) },
                             )
                         }
                     }
@@ -446,8 +500,8 @@ class MainActivity : ComponentActivity() {
                     steps = 5,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { scope.launch { app.speech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } }) { Text("Ouvir") }
-                    OutlinedButton(onClick = ::openTtsSettings) { Text("Instalar mais vozes") }
+                    RisoButton("Ouvir", onClick = { scope.launch { app.speech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } })
+                    RisoButton("Instalar mais vozes", onClick = ::openTtsSettings, primary = false)
                 }
             }
         }

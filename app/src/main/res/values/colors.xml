@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Papel da risografia, o mesmo fundo do logo. -->
+    <color name="riso_papel">#FBF9EF</color>
+    <!-- Fundo do ícone: sempre papel claro, também no modo escuro. -->
+    <color name="icone_fundo">#FBF9EF</color>
+</resources>
