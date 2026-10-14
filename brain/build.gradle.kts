@@ -26,4 +26,5 @@ kotlin {
 dependencies {
     api(project(":core"))
     implementation(libs.coroutines.core)
+    implementation(libs.litertlm)
 }

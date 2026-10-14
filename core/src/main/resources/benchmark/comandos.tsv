@@ -1,0 +1,103 @@
+# Benchmark do modelo local: esperado <TAB> comando <TAB> argumentos (chave=trecho;...)
+# esperado: nome da ferramenta, "resposta" (pergunta que o local responde) ou "nuvem" (precisa de informação atual).
+# Os trechos são comparados sem acento e sem maiúsculas: basta o argumento conter o trecho.
+whatsapp_preparar	avisa a Ana que eu vou me atrasar uns dez minutos	contato=ana;texto=atras
+whatsapp_preparar	fala pro Pedro que a reunião foi cancelada	contato=pedro;texto=cancelad
+whatsapp_preparar	escreve pra minha mãe perguntando se ela já jantou	contato=mae;texto=jant
+whatsapp_preparar	dá um toque no Carlos no zap dizendo que cheguei	contato=carlos;texto=cheguei
+whatsapp_preparar	responde a Júlia no WhatsApp que pode ser amanhã	contato=julia;texto=amanha
+whatsapp_preparar	quero mandar um oi pro Rafael	contato=rafael
+whatsapp_preparar	avisa o grupo da família que o almoço é às duas	contato=familia;texto=almoco
+whatsapp_preparar	diz pra Bia que eu tô saindo agora	contato=bia;texto=saindo
+whatsapp_preparar	manda um zap pro Lucas perguntando a hora do jogo	contato=lucas;texto=jogo
+whatsapp_preparar	envia pra Camila: já estou no estacionamento	contato=camila;texto=estacionamento
+ligar	me coloca na linha com o Fernando	contato=fernando
+ligar	preciso falar com a minha irmã agora	contato=irma
+ligar	telefona pro escritório	contato=escritorio
+ligar	faz uma chamada pra Marina	contato=marina
+ligar	disca pro meu pai	contato=pai
+ligar	quero ligar pro doutor Paulo	contato=paulo
+uber_preparar	preciso de um carro pra ir pro trabalho	destino=trabalho
+uber_preparar	me arruma um uber até a rodoviária	destino=rodoviaria
+uber_preparar	chama um carro pra me levar pra casa	destino=casa
+uber_preparar	pede uma corrida no Uber pro aeroporto de Guarulhos	destino=guarulhos
+noventa_e_nove_abrir	abre o 99 pra eu ir pro centro	destino=centro
+noventa_e_nove_abrir	quero pegar um 99	
+ifood_abrir	tô com fome, quero pedir um hambúrguer	busca=hamburguer
+ifood_abrir	vê se tem sushi no iFood	busca=sushi
+ifood_abrir	pede um açaí pra mim	busca=acai
+ifood_abrir	abre o iFood	
+spotify_tocar	bota uma música do Caetano	busca=caetano
+spotify_tocar	quero ouvir Legião Urbana	busca=legiao
+spotify_tocar	coloca um samba pra tocar	busca=samba
+spotify_tocar	toca a playlist de foco	busca=foco
+spotify_tocar	tô a fim de ouvir lo-fi	busca=lo
+spotify_tocar	solta aquela da Marisa Monte, Ainda Bem	busca=ainda bem
+navegar	qual o caminho pro Ibirapuera	destino=ibirapuera
+navegar	me guia até a farmácia mais próxima	destino=farmacia
+navegar	abre o mapa até a casa da vó	destino=vo
+navegar	como eu faço pra chegar na Paulista	destino=paulista
+navegar	traça a rota pro shopping Eldorado	destino=eldorado
+navegar	quero ir de carro até Campinas	destino=campinas
+alarme	me desperta às seis	hora=6
+alarme	coloca um alarme pras sete e quinze	hora=7;minuto=15
+alarme	quero acordar às cinco e meia amanhã	hora=5;minuto=30
+alarme	alarme às 22h para tomar o remédio	hora=22;rotulo=remedio
+alarme	me chama às nove da manhã	hora=9
+alarme	programa o despertador para meio-dia	hora=12
+timer	conta dez minutos pra mim	segundos=600
+timer	me avisa daqui a meia hora	segundos=1800
+timer	marca 3 minutos pro ovo	segundos=180
+timer	cronometra quarenta e cinco segundos	segundos=45
+timer	timer de uma hora e meia	segundos=5400
+timer	põe um temporizador de 25 minutos	segundos=1500
+buscar_web	procura na internet receita de bolo de cenoura	consulta=bolo de cenoura
+buscar_web	pesquisa o horário de funcionamento do Detran	consulta=detran
+buscar_web	dá um google em como trocar pneu	consulta=pneu
+buscar_web	busca reviews do Galaxy S25	consulta=s25
+abrir_app	abre a calculadora	nome=calculadora
+abrir_app	quero ver minha galeria	nome=galeria
+abrir_app	entra no Instagram	nome=instagram
+abrir_app	abre as configurações	nome=configura
+abrir_app	liga a câmera	nome=camera
+buscar_arquivos	cadê o comprovante que eu baixei ontem	termo=comprovante;periodo=ontem
+buscar_arquivos	encontra a planilha do orçamento	termo=orcamento
+buscar_arquivos	mostra os vídeos dessa semana	tipo=video;periodo=semana
+buscar_arquivos	acha o contrato de aluguel em PDF	termo=aluguel;tipo=pdf
+buscar_arquivos	onde tá o meu currículo	termo=curriculo
+buscar_arquivos	procura as fotos de hoje	tipo=imagem;periodo=hoje
+resposta	quem escreveu Dom Casmurro	
+resposta	qual é a capital da Austrália	
+resposta	quantos centímetros tem um metro	
+resposta	quanto é 15 vezes 12	
+resposta	o que é fotossíntese	
+resposta	quem pintou a Mona Lisa	
+resposta	qual o maior planeta do sistema solar	
+resposta	como se diz obrigado em inglês	
+resposta	quantos dias tem um ano bissexto	
+resposta	o que significa a sigla ONU	
+resposta	qual a fórmula da água	
+resposta	quem foi Santos Dumont	
+resposta	qual a diferença entre vírus e bactéria	
+resposta	quantos minutos tem um dia	
+resposta	em que continente fica o Egito	
+resposta	me dá uma ideia de presente para um amigo que gosta de café	
+resposta	qual o plural de cidadão	
+resposta	quanto é 20 por cento de 150	
+resposta	o que é um número primo	
+resposta	que dia da semana é hoje	
+resposta	me conta uma curiosidade sobre polvos	
+resposta	qual a velocidade da luz	
+resposta	como faço arroz soltinho	
+resposta	quantos estados tem o Brasil	
+nuvem	como está o tempo em São Paulo agora	
+nuvem	quanto está o dólar hoje	
+nuvem	quem ganhou o jogo do Flamengo ontem	
+nuvem	quais as notícias de hoje	
+nuvem	como está o trânsito na Marginal	
+nuvem	quanto custa o iPhone mais novo	
+nuvem	vai chover amanhã no Rio	
+nuvem	qual a cotação do bitcoin agora	
+nuvem	quem lidera o Brasileirão neste momento	
+nuvem	que filmes estão em cartaz hoje	
+nuvem	qual o resultado da Mega-Sena de ontem	

@@ -56,3 +56,14 @@ Cada decisão técnica, com data e motivo. Mudar uma delas exige uma nova entrad
 ## App sempre no papel claro
 
 O fundo escuro do modo noturno ficou difícil de ler. A tela do app usa sempre o papel creme, com ícones escuros nas barras do sistema. O cartão do agente continua seguindo o tema do sistema, porque nele o escuro funcionou bem.
+
+## Cérebro no celular (Etapa 3b)
+
+- **Gemma 4 pelo LiteRT-LM 0.18**, a mesma versão do app AI Edge Gallery do Google. E2B (2,6 GB) é o padrão por ser mais rápido; E4B (3,7 GB) é opcional e cabe nos 12 GB do S25 Ultra.
+- **O modelo é baixado pelo app, não vai no APK.** Alguns GB não cabem num APK. O download usa o DownloadManager do Android (continua com o app fechado, retoma, só no Wi-Fi) e o endereço é preso a um commit do Hugging Face, para o arquivo ser sempre o testado.
+- **Ordem: regras, depois Gemma, depois nuvem.** A nuvem só entra se estiver configurada e se a pessoa deixar ("Perguntar à nuvem" ou "Só no celular"). O modelo local não passa pelo Redactor porque nada sai do aparelho.
+- **Chamada de ferramenta nativa, em modo manual.** O Gemma recebe o mesmo catálogo da nuvem e só propõe a chamada; quem executa é o `Assistant`, com a mesma política de risco. Ferramenta inventada é descartada; chamada sem argumento obrigatório e "NAO_SEI" (informação atual) passam a vez para a nuvem.
+- **Amostragem determinística** (topK 1, temperatura 0) e conversa nova por pedido: o mesmo pedido escolhe sempre a mesma ferramenta, sem histórico misturando pedidos.
+- **GPU primeiro, CPU de reserva.** Se o driver recusar a GPU, o motor carrega na CPU. O modelo começa a carregar quando o cartão abre, enquanto a pessoa fala.
+- **Benchmark de 100 comandos** em `core/src/main/resources/benchmark/comandos.tsv`: ações ditas de jeitos que as regras não cobrem, perguntas de conhecimento geral e perguntas que precisam de informação atual (o certo é passar a vez). Roda no app, em Testar.
+- **Kotlin 2.4.20.** O LiteRT-LM 0.18 é compilado com Kotlin 2.4 e traz o `kotlin-stdlib` 2.4; o compilador 2.2 não lê esses metadados.

@@ -3,9 +3,12 @@ package app.blico
 import android.app.Application
 import android.content.Intent
 import app.blico.brain.HttpCloudTransport
+import app.blico.brain.LiteRtLocalProvider
+import app.blico.brain.ModelStore
 import app.blico.core.Assistant
 import app.blico.core.CloudProvider
 import app.blico.core.ExecContext
+import app.blico.core.OptionalProvider
 import app.blico.core.RedactingProvider
 import app.blico.core.RuleRouter
 import app.blico.core.ToolRegistry
@@ -19,6 +22,7 @@ import app.blico.voice.AndroidSpeechOutput
 import app.blico.voice.VoicePrefs
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.UUID
 
 /** Peças compartilhadas pelo processo. A fala vive aqui para não ser cortada quando o cartão fecha. */
@@ -60,22 +64,40 @@ class BlicoApp : Application() {
         get() = secrets.get("device_token").orEmpty()
         set(v) = secrets.set("device_token", v)
 
+    /** Se a nuvem entra quando o modelo local não sabe. Desligada, nada sai do celular. */
+    var cloudFallback: Boolean
+        get() = cloudPrefs.getBoolean("usar", true)
+        set(v) = cloudPrefs.edit().putBoolean("usar", v).apply()
+
+    val cloudConfigured: Boolean get() = cloudEndpoint.startsWith("https://") && cloudToken.isNotEmpty()
+
     private val transport by lazy { HttpCloudTransport({ cloudEndpoint }, { cloudToken }) }
 
+    val models by lazy { ModelStore(this) }
+    val local by lazy { LiteRtLocalProvider({ models.selectedFile() }, File(cacheDir, "litertlm")) }
+
     /**
-     * Primeiro as regras (instantâneas, offline); o que elas não entendem vai para a nuvem,
-     * sempre mascarado. O modelo local entra entre os dois numa etapa seguinte.
+     * Primeiro as regras (instantâneas); depois o Gemma no aparelho; só o que os dois não
+     * resolvem vai para a nuvem, sempre mascarado, e só se ela estiver configurada e ligada.
      */
     val assistant by lazy {
         Assistant(
             providers = listOf(
                 RuleRouter(),
-                RedactingProvider(CloudProvider(transport::post)) {
-                    RedactingProvider.entitiesFrom(contacts.names(), places.all())
-                },
+                OptionalProvider(local) { local.isReady() },
+                OptionalProvider(
+                    RedactingProvider(CloudProvider(transport::post)) {
+                        RedactingProvider.entitiesFrom(contacts.names(), places.all())
+                    },
+                ) { cloudFallback && cloudConfigured },
             ),
             registry = ToolRegistry(builtinTools()),
         )
+    }
+
+    /** Carrega o modelo local enquanto a pessoa fala, para a resposta não esperar por isso. */
+    fun warmUpLocal() {
+        scope.launch { runCatching { local.warmUp() } }
     }
 
     fun say(text: String) {
