@@ -34,8 +34,9 @@ class Assistant(
     private val policy: RiskPolicy = RiskPolicy(registry),
     private val minConfidence: Double = 0.6,
 ) {
-    suspend fun handle(text: String, ctx: ExecContext): Outcome {
-        val request = LlmRequest(text, registry.all.filter { it.exposedToModels })
+    /** [onRoute] recebe o id do provedor que decidiu: regras, local ou nuvem. */
+    suspend fun handle(text: String, ctx: ExecContext, onRoute: (String) -> Unit = {}): Outcome {
+        val request = LlmRequest(text, modelTools())
         var failure: Throwable? = null
         for (provider in providers) {
             val decision = try {
@@ -47,8 +48,8 @@ class Assistant(
                 continue
             }
             if (decision.confidence < minConfidence) continue
-            decision.calls.firstOrNull()?.let { return execute(it, ctx) }
-            decision.answer?.let { return Outcome.Answer(it) }
+            decision.calls.firstOrNull()?.let { onRoute(provider.id); return execute(it, ctx) }
+            decision.answer?.let { onRoute(provider.id); return Outcome.Answer(it) }
         }
         return when (failure) {
             is CloudUnavailable -> Outcome.Failed("Não consegui falar com a nuvem. ${failure.message}", failure.toString())
@@ -56,6 +57,9 @@ class Assistant(
             else -> Outcome.Failed("Não consegui entender agora, tente de novo", failure.toString())
         }
     }
+
+    /** Ferramentas que os modelos podem escolher. */
+    fun modelTools(): List<Tool> = registry.all.filter { it.exposedToModels }
 
     /** Executa uma chamada já decidida: depois de uma escolha ou do toque em Confirmar ([confirmed]). */
     suspend fun execute(call: ToolCall, ctx: ExecContext, confirmed: Boolean = false): Outcome =

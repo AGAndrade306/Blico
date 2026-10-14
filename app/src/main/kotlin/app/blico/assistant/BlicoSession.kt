@@ -74,6 +74,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         owner.onShow()
+        app.warmUpLocal()
         startListening()
     }
 

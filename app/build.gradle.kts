@@ -19,7 +19,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -30,6 +30,11 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    packaging {
+        // O LiteRT-LM traz a mesma biblioteca JNI por mais de um caminho.
+        jniLibs { pickFirsts.add("**/liblitertlm_jni.so") }
     }
 }
 

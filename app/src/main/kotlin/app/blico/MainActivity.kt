@@ -181,10 +181,12 @@ class MainActivity : ComponentActivity() {
             Section("Personalizar")
             VoiceSettings()
             Places()
+            LocalModelCard(application as BlicoApp)
             Cloud()
 
             Section("Testar")
             CommandTest()
+            LocalBenchmarkCard(application as BlicoApp)
             ListenTest(transcriber, enabled = micGranted)
             Spacer(Modifier.height(24.dp))
         }
@@ -282,12 +284,13 @@ class MainActivity : ComponentActivity() {
         val app = application as BlicoApp
         var endpoint by remember { mutableStateOf(app.cloudEndpoint) }
         var token by remember { mutableStateOf(if (app.cloudToken.isEmpty()) "" else TOKEN_MASK) }
+        var fallback by remember { mutableStateOf(app.cloudFallback) }
         RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
                 val ready = endpoint.startsWith("https://") && token.isNotEmpty()
                 Text((if (ready) "✓ " else "○ ") + "Nuvem", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Para perguntas e pedidos que os comandos básicos não cobrem. Nomes, números e endereços vão mascarados.",
+                    "Para o que nem os comandos básicos nem o cérebro do celular resolvem. Nomes, números e endereços vão mascarados.",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedTextField(
@@ -314,6 +317,12 @@ class MainActivity : ComponentActivity() {
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
+                Spacer(Modifier.height(10.dp))
+                Text("Quando o cérebro do celular não souber", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    RisoChip("Perguntar à nuvem", selected = fallback, onClick = { fallback = true; app.cloudFallback = true })
+                    RisoChip("Só no celular", selected = !fallback, onClick = { fallback = false; app.cloudFallback = false })
+                }
             }
         }
     }
@@ -325,6 +334,7 @@ class MainActivity : ComponentActivity() {
         val scope = rememberCoroutineScope()
         var text by remember { mutableStateOf("") }
         var result by remember { mutableStateOf<Outcome?>(null) }
+        var route by remember { mutableStateOf<String?>(null) }
 
         RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
@@ -339,12 +349,17 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.height(8.dp))
                 RisoButton("Executar", enabled = text.isNotBlank(), onClick = {
                     scope.launch {
-                        val out = app.assistant.handle(text, app.execContext { startActivity(it) })
+                        route = null
+                        val start = System.currentTimeMillis()
+                        var via: String? = null
+                        val out = app.assistant.handle(text, app.execContext { startActivity(it) }) { via = it }
+                        route = via?.let { "Entendido por: ${ROUTES[it] ?: it}, em %.1f s".format(java.util.Locale.forLanguageTag("pt-BR"), (System.currentTimeMillis() - start) / 1000.0) }
                         result = out
                         app.say(out.spoken)
                     }
                 })
                 result?.let { Text(it.spoken, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp)) }
+                route?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 (result as? Outcome.Files)?.let { files ->
                     FileResults(files.items) { call ->
                         scope.launch {
@@ -407,6 +422,9 @@ class MainActivity : ComponentActivity() {
     private companion object {
         /** Mostrado no campo quando já existe um token salvo; o token em si nunca volta para a tela. */
         const val TOKEN_MASK = "••••••••"
+
+        /** Quem entendeu o comando, em palavras. */
+        val ROUTES = mapOf("regras" to "comandos básicos", "local" to "cérebro do celular", "nuvem" to "nuvem")
     }
 
     private fun openDefaultApps() = openFirst(

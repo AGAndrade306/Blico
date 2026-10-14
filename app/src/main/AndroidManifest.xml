@@ -45,6 +45,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Blico">
 
+        <!-- GPU para o Gemma no aparelho (LiteRT-LM). Sem elas, o modelo roda na CPU. -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
