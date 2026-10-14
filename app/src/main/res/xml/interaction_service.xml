@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Faz o Blico aparecer em Apps padrão › App de assistente digital. -->
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:recognitionService="app.blico.assistant.BlicoRecognitionService"
+    android:sessionService="app.blico.assistant.BlicoSessionService"
+    android:settingsActivity="app.blico.MainActivity"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false"
+    android:supportsLocalInteraction="false" />

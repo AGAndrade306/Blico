@@ -16,7 +16,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.coroutines.core)
+    api(libs.coroutines.core)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)
