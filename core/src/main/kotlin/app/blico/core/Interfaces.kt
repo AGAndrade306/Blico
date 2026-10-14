@@ -9,11 +9,13 @@ data class LlmRequest(
 
 /**
  * Resposta do cérebro. [confidence] vai de 0 a 1 e é o que o roteador híbrido usa
- * para decidir se escala para a nuvem.
+ * para decidir se escala para a nuvem. [answer] é a resposta falada quando o pedido
+ * é uma pergunta e não uma ação.
  */
 data class LlmDecision(
     val calls: List<ToolCall>,
     val confidence: Double,
+    val answer: String? = null,
 )
 
 /** Implementado pelo modelo local e pelo da nuvem. */

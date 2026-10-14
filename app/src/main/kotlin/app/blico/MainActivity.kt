@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
             }
 
             Places()
+            Cloud()
 
             Spacer(Modifier.height(8.dp))
             ListenTest(transcriber, enabled = micGranted)
@@ -194,6 +195,46 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
+            }
+        }
+    }
+
+    /** Servidor da nuvem (Cloudflare Worker). Sem ele, o Blico só entende os comandos básicos. */
+    @Composable
+    private fun Cloud() {
+        val app = application as BlicoApp
+        var endpoint by remember { mutableStateOf(app.cloudEndpoint) }
+        var token by remember { mutableStateOf(if (app.cloudToken.isEmpty()) "" else TOKEN_MASK) }
+        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                val ready = endpoint.startsWith("https://") && token.isNotEmpty()
+                Text((if (ready) "✓ " else "○ ") + "Nuvem", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Para perguntas e pedidos que os comandos básicos não cobrem. Nomes, números e endereços vão mascarados.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(
+                    value = endpoint,
+                    onValueChange = {
+                        endpoint = it
+                        app.cloudEndpoint = it
+                    },
+                    label = { Text("Endereço do servidor") },
+                    placeholder = { Text("https://blico.seu-usuario.workers.dev") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = {
+                        token = it
+                        if (it != TOKEN_MASK) app.cloudToken = it
+                    },
+                    label = { Text("Token do aparelho") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
             }
         }
     }
@@ -262,6 +303,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private companion object {
+        /** Mostrado no campo quando já existe um token salvo; o token em si nunca volta para a tela. */
+        const val TOKEN_MASK = "••••••••"
     }
 
     private fun openDefaultApps() = openFirst(

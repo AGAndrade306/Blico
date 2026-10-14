@@ -12,6 +12,9 @@ class PrefsPlaceBook(context: Context) : PlaceBook {
 
     override fun resolve(alias: String): String? = prefs.getString(key(alias), null)?.takeIf { it.isNotBlank() }
 
+    override fun all(): Map<String, String> =
+        ALIASES.mapNotNull { a -> resolve(a)?.let { a to it } }.toMap()
+
     fun set(alias: String, address: String) {
         prefs.edit().putString(key(alias), address.trim()).apply()
     }

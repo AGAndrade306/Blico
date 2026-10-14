@@ -27,12 +27,13 @@ Responda e documente em português do Brasil.
 | `memory` | Android lib | Arquivos de memória criptografados |
 | `confirmation` | Android lib | Cartão Confirmar |
 | `testkit` | Android lib | Fakes e testes instrumentados |
+| `server/` | Cloudflare Worker (TypeScript) | Guarda a chave da Anthropic e repassa `/v1/plan` |
 
 Regra de dependência: `core` não depende de nada do projeto; todos os outros dependem de `core`.
 
 ## Como trabalhar
 
-- `./gradlew test lint assembleDebug` precisa passar antes de qualquer PR.
+- `./gradlew test lint assembleDebug` e, em `server/`, `npm test && npm run typecheck` precisam passar antes de qualquer PR.
 - Toda lógica que não precisa do aparelho fica em `core` ou atrás de interfaces, com teste unitário.
 - Uma branch por etapa, commits pequenos, e cada decisão técnica registrada em `docs/DECISIONS.md` com o motivo.
 - Quando faltar algo que só o aparelho ou o dono sabe (um deep link, uma permissão), parar e perguntar em vez de inventar.
@@ -42,5 +43,6 @@ Regra de dependência: `core` não depende de nada do projeto; todos os outros d
 - Etapa 0: esqueleto, CI, `core` com testes.
 - Etapa 1: assistente padrão (VoiceInteractionService) com captura e transcrição.
 - Etapa 2: roteador por regras e primeiras ações por intent (WhatsApp, ligar, Uber, 99, iFood, Spotify, Maps, alarme, timer, busca), com resposta falada.
-- Etapa 3: cérebro híbrido (modelo local LiteRT-LM + servidor Ktor + nuvem) para o que as regras não entendem; benchmark de 100 comandos.
+- Etapa 3: nuvem para o que as regras não entendem: servidor em Cloudflare Workers (`server/`) com Claude Haiku 5.5, mascaramento antes do envio e respostas faladas.
+- Etapa 3b: modelo local (LiteRT-LM + Gemma 4) entre as regras e a nuvem; benchmark de 100 comandos.
 - Etapa 4: Accessibility, cartão Confirmar e envio de verdade (classe 2); testes de Shizuku.

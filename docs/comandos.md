@@ -17,4 +17,4 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "pesquisa preço do dólar" | Pesquisa na internet. |
 | "abre a câmera" | Abre qualquer app pelo nome. |
 
-O que não está na lista recebe "Ainda não sei fazer isso". Na Etapa 3, esses pedidos passam a ir para o modelo local e, quando precisar, para a nuvem.
+O que não está na lista vai para a nuvem, se o servidor estiver configurado na tela inicial do app. A nuvem pode escolher uma das ferramentas acima (com as mesmas regras de confirmação) ou responder uma pergunta em voz alta ("quem escreveu Dom Casmurro?"). Antes de sair do aparelho, nomes de contatos, telefones, e-mails e endereços salvos são trocados por apelidos e restaurados na volta. Sem servidor configurado, a resposta continua sendo "Ainda não sei fazer isso".

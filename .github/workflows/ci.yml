@@ -22,3 +22,21 @@ jobs:
         with:
           name: blico-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - name: Testes e checagem de tipos do servidor
+        run: |
+          npm test
+          npm run typecheck

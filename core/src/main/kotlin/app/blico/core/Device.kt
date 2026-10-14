@@ -41,9 +41,15 @@ data class Contact(val name: String, val phone: String)
 interface ContactDirectory {
     /** Contatos cujo nome bate com [query]. Lista vazia se não houver permissão. */
     suspend fun find(query: String): List<Contact>
+
+    /** Nomes da agenda, usados para mascarar o pedido antes de ir para a nuvem. */
+    suspend fun names(): List<String> = emptyList()
 }
 
 /** Lugares com apelido: "casa", "trabalho". */
 interface PlaceBook {
     fun resolve(alias: String): String?
+
+    /** Endereços cadastrados, por apelido. Também mascarados antes da nuvem. */
+    fun all(): Map<String, String> = emptyMap()
 }

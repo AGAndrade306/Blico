@@ -1,7 +1,8 @@
 // Tipos puros do Blico. Sem dependência de Android, para ser reaproveitado
-// pelo servidor (Etapa 2) e testado sem aparelho.
+// e testado sem aparelho.
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 java {
@@ -17,6 +18,7 @@ kotlin {
 
 dependencies {
     api(libs.coroutines.core)
+    implementation(libs.serialization.json)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)
