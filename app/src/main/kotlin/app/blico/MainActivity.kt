@@ -227,8 +227,10 @@ class MainActivity : ComponentActivity() {
                 OutlinedTextField(
                     value = token,
                     onValueChange = {
-                        token = it
-                        if (it != TOKEN_MASK) app.cloudToken = it
+                        // Colar por cima da máscara não pode gravar os pontos junto com o token.
+                        val clean = it.replace("•", "")
+                        token = if (it == TOKEN_MASK) it else clean
+                        if (it != TOKEN_MASK) app.cloudToken = clean
                     },
                     label = { Text("Token do aparelho") },
                     singleLine = true,

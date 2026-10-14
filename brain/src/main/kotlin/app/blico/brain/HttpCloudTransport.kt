@@ -40,6 +40,8 @@ class HttpCloudTransport(
             when (code) {
                 in 200..299 -> text
                 401 -> throw CloudUnavailable("O token do aparelho não confere com o do servidor.")
+                503 -> throw CloudUnavailable("O servidor está sem o DEVICE_TOKEN. Crie ele como segredo na Cloudflare.")
+                502 -> throw CloudUnavailable("O servidor não conseguiu falar com a Anthropic. Confira a chave no painel da Cloudflare.")
                 429 -> throw CloudUnavailable("Limite de uso atingido, tente mais tarde.")
                 else -> throw CloudUnavailable("O servidor respondeu com erro $code.")
             }
