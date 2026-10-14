@@ -1,5 +1,7 @@
 package app.blico
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.Manifest
 import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
@@ -24,20 +26,19 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.sp
-import app.blico.ui.LocalRiso
-import app.blico.ui.RisoButton
-import app.blico.ui.RisoCard
-import app.blico.ui.RisoChip
-import app.blico.ui.RisoMark
-import app.blico.ui.RisoTheme
-import app.blico.ui.RisoTitle
-import app.blico.ui.grain
-import app.blico.ui.paper
+import app.blico.ui.LocalBlico
+import app.blico.ui.BlicoButton
+import app.blico.ui.BlicoCard
+import app.blico.ui.BlicoChip
+import app.blico.ui.BlicoMark
+import app.blico.ui.BlicoTheme
+import app.blico.ui.BlicoProgress
+import app.blico.ui.CardShape
+import app.blico.ui.LargeTitle
+import app.blico.ui.screen
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
@@ -54,12 +55,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.blico.assistant.FileResults
@@ -82,8 +81,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = clara, navigationBarStyle = clara)
         super.onCreate(savedInstanceState)
         setContent {
-            RisoTheme(dark = false) {
-                Box(Modifier.fillMaxSize().paper()) {
+            BlicoTheme(dark = false) {
+                Box(Modifier.fillMaxSize().screen()) {
                     SetupScreen(resumeTick)
                 }
             }
@@ -131,7 +130,7 @@ class MainActivity : ComponentActivity() {
                 done = micGranted,
                 detail = "Só abre depois do seu gesto, nunca fica ouvindo.",
             ) {
-                RisoButton("Permitir microfone", onClick = { askMic.launch(Manifest.permission.RECORD_AUDIO) })
+                BlicoButton("Permitir microfone", onClick = { askMic.launch(Manifest.permission.RECORD_AUDIO) })
             }
 
             Step(
@@ -143,7 +142,7 @@ class MainActivity : ComponentActivity() {
                     "Indisponível neste aparelho. Instale ou atualize o app de reconhecimento de fala do sistema."
                 },
             ) {
-                RisoButton("Baixar português", onClick = { transcriber.requestLanguageDownload() }, primary = false)
+                BlicoButton("Baixar português", onClick = { transcriber.requestLanguageDownload() }, primary = false)
             }
 
             Step(
@@ -151,7 +150,7 @@ class MainActivity : ComponentActivity() {
                 done = isAssistant,
                 detail = "Em Apps padrão › App de assistente digital, escolha o Blico.",
             ) {
-                RisoButton("Abrir Apps padrão", onClick = ::openDefaultApps)
+                BlicoButton("Abrir Apps padrão", onClick = ::openDefaultApps)
             }
 
             Step(
@@ -159,7 +158,7 @@ class MainActivity : ComponentActivity() {
                 done = null,
                 detail = "Configurações › Recursos avançados › Botão lateral › Pressionar e segurar › Ativar assistente digital.",
             ) {
-                RisoButton("Abrir Configurações", onClick = ::openSideKeySettings, primary = false)
+                BlicoButton("Abrir Configurações", onClick = ::openSideKeySettings, primary = false)
             }
 
             Step(
@@ -167,7 +166,7 @@ class MainActivity : ComponentActivity() {
                 done = contactsGranted,
                 detail = "Para achar o número quando você diz \"manda pro João\". A agenda não sai do celular.",
             ) {
-                RisoButton("Permitir contatos", onClick = { askContacts.launch(Manifest.permission.READ_CONTACTS) })
+                BlicoButton("Permitir contatos", onClick = { askContacts.launch(Manifest.permission.READ_CONTACTS) })
             }
 
             Step(
@@ -175,7 +174,7 @@ class MainActivity : ComponentActivity() {
                 done = Environment.isExternalStorageManager(),
                 detail = "Para \"acha o pdf do contrato\" e \"fotos de ontem\". A busca é feita no celular e nada sai dele.",
             ) {
-                RisoButton("Liberar acesso aos arquivos", onClick = ::openAllFilesAccess)
+                BlicoButton("Liberar acesso aos arquivos", onClick = ::openAllFilesAccess)
             }
 
             Section("Personalizar")
@@ -192,62 +191,60 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Logo, nome com a tinta rosa fora de registro e quantos passos já estão prontos. */
+    /** Logo, título grande e quantos passos já estão prontos. */
     @Composable
     private fun Header(ready: Int, total: Int) {
-        val p = LocalRiso.current
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+        val p = LocalBlico.current
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)) {
             Image(
                 painter = painterResource(R.drawable.blico_logo),
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(56.dp).clip(CardShape).background(p.card),
             )
             Spacer(Modifier.width(14.dp))
             Column {
-                RisoTitle("Blico", style = MaterialTheme.typography.displaySmall)
-                Text("seu assistente, no seu celular", style = MaterialTheme.typography.bodyMedium, color = p.muted)
+                LargeTitle("Blico")
+                Text("Seu assistente, no seu celular", style = MaterialTheme.typography.bodyMedium, color = p.muted)
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         val all = ready == total
-        Text(
-            if (all) "Tudo pronto. Segure o botão lateral e fale." else "$ready de $total passos prontos",
-            style = MaterialTheme.typography.labelLarge,
-            color = p.text,
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(p.pink)
-                .grain()
-                .padding(horizontal = 14.dp, vertical = 7.dp),
-        )
+        BlicoCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (all) "Tudo pronto. Segure o botão lateral e fale." else "$ready de $total passos prontos",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                BlicoMark(all)
+            }
+            if (!all) BlicoProgress(ready.toFloat() / total, Modifier.padding(top = 10.dp))
+        }
     }
 
-    /** Título de seção: pequeno, verde, com um traço rosa embaixo. */
+    /** Título de seção, como nas listas agrupadas do iOS. */
     @Composable
     private fun Section(title: String) {
-        val p = LocalRiso.current
-        Spacer(Modifier.height(22.dp))
-        Text(title.uppercase(), style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 2.sp), color = p.green)
-        Box(Modifier.padding(top = 4.dp, bottom = 6.dp).width(36.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(p.pink))
+        Spacer(Modifier.height(28.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge, color = LocalBlico.current.text, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
     }
 
     /** Passo de configuração. Pronto, ele encolhe para uma linha; pendente, mostra o porquê e o botão. */
     @Composable
     private fun Step(title: String, done: Boolean?, detail: String, action: @Composable () -> Unit) {
-        val p = LocalRiso.current
-        RisoCard(
-            Modifier.fillMaxWidth().padding(vertical = 6.dp),
-            accent = if (done == true) p.green.copy(alpha = 0.35f) else p.pink,
-            contentPadding = if (done == true) PaddingValues(horizontal = 18.dp, vertical = 12.dp) else PaddingValues(18.dp),
+        val p = LocalBlico.current
+        BlicoCard(
+            Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            contentPadding = if (done == true) PaddingValues(horizontal = 16.dp, vertical = 13.dp) else PaddingValues(16.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                RisoMark(done)
+                BlicoMark(done)
             }
             if (done != true) {
                 Spacer(Modifier.height(4.dp))
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = p.muted)
-                Spacer(Modifier.height(12.dp))
+                Text(detail, style = MaterialTheme.typography.bodyMedium, color = p.muted)
+                Spacer(Modifier.height(10.dp))
                 action()
             }
         }
@@ -257,7 +254,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Places() {
         val places = (application as BlicoApp).places
-        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
                 Text("Lugares", style = MaterialTheme.typography.titleMedium)
                 Text("Usados no Uber e na navegação.", style = MaterialTheme.typography.bodySmall)
@@ -285,7 +282,7 @@ class MainActivity : ComponentActivity() {
         var endpoint by remember { mutableStateOf(app.cloudEndpoint) }
         var token by remember { mutableStateOf(if (app.cloudToken.isEmpty()) "" else TOKEN_MASK) }
         var fallback by remember { mutableStateOf(app.cloudFallback) }
-        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
                 val ready = endpoint.startsWith("https://") && token.isNotEmpty()
                 Text((if (ready) "✓ " else "○ ") + "Nuvem", style = MaterialTheme.typography.titleMedium)
@@ -320,8 +317,8 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.height(10.dp))
                 Text("Quando o cérebro do celular não souber", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-                    RisoChip("Perguntar à nuvem", selected = fallback, onClick = { fallback = true; app.cloudFallback = true })
-                    RisoChip("Só no celular", selected = !fallback, onClick = { fallback = false; app.cloudFallback = false })
+                    BlicoChip("Perguntar à nuvem", selected = fallback, onClick = { fallback = true; app.cloudFallback = true })
+                    BlicoChip("Só no celular", selected = !fallback, onClick = { fallback = false; app.cloudFallback = false })
                 }
             }
         }
@@ -336,7 +333,7 @@ class MainActivity : ComponentActivity() {
         var result by remember { mutableStateOf<Outcome?>(null) }
         var route by remember { mutableStateOf<String?>(null) }
 
-        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
                 Text("Testar um comando", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(
@@ -347,7 +344,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
                 Spacer(Modifier.height(8.dp))
-                RisoButton("Executar", enabled = text.isNotBlank(), onClick = {
+                BlicoButton("Executar", enabled = text.isNotBlank(), onClick = {
                     scope.launch {
                         route = null
                         val start = System.currentTimeMillis()
@@ -371,7 +368,7 @@ class MainActivity : ComponentActivity() {
                 }
                 (result as? Outcome.Confirm)?.let { confirm ->
                     confirm.summary.fields.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodyMedium) }
-                    RisoButton("Confirmar", onClick = {
+                    BlicoButton("Confirmar", onClick = {
                         scope.launch {
                             val out = app.assistant.execute(confirm.call, app.execContext { startActivity(it) }, confirmed = true)
                             result = out
@@ -390,11 +387,11 @@ class MainActivity : ComponentActivity() {
         var state by remember { mutableStateOf<ListeningState?>(null) }
         var job by remember { mutableStateOf<Job?>(null) }
 
-        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
                 Text("Testar aqui", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                RisoButton(
+                BlicoButton(
                     "Falar",
                     enabled = enabled,
                     onClick = {
@@ -460,7 +457,7 @@ class MainActivity : ComponentActivity() {
             app.voicePrefs = p
         }
 
-        RisoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
                 Text("Voz", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -472,7 +469,7 @@ class MainActivity : ComponentActivity() {
                     Text("Motor", style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         engines.forEach { e ->
-                            RisoChip(
+                            BlicoChip(
                                 e.label,
                                 selected = e.packageName == currentEngine,
                                 onClick = { update(prefs.copy(engine = e.packageName, voice = null)) },
@@ -490,9 +487,9 @@ class MainActivity : ComponentActivity() {
                         style = MaterialTheme.typography.bodySmall,
                     )
                     else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        RisoChip("Padrão", selected = prefs.voice == null, onClick = { update(prefs.copy(voice = null)) })
+                        BlicoChip("Padrão", selected = prefs.voice == null, onClick = { update(prefs.copy(voice = null)) })
                         list.forEach { v ->
-                            RisoChip(
+                            BlicoChip(
                                 v.label,
                                 selected = prefs.voice == v.name,
                                 onClick = {
@@ -521,8 +518,8 @@ class MainActivity : ComponentActivity() {
                     steps = 5,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RisoButton("Ouvir", onClick = { scope.launch { app.speech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } })
-                    RisoButton("Instalar mais vozes", onClick = ::openTtsSettings, primary = false)
+                    BlicoButton("Ouvir", onClick = { scope.launch { app.speech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } })
+                    BlicoButton("Instalar mais vozes", onClick = ::openTtsSettings, primary = false)
                 }
             }
         }
