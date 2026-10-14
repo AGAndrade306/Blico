@@ -45,3 +45,10 @@ Cada decisão técnica, com data e motivo. Mudar uma delas exige uma nova entrad
 - **Renomear tenta o MediaStore e cai para o arquivo em disco** com reindexação, se o sistema recusar o update.
 - **Excluir fica de fora por enquanto**: no Android isso passa por uma tela do sistema, e o cartão Confirmar não substitui a lixeira.
 - **Voz: só vozes que funcionam sem internet.** O motor (Samsung, Google…) e a voz são escolhidos na tela inicial, com velocidade e tom. Vozes de rede mandariam o texto falado para fora do aparelho (regra 5), então nem aparecem na lista.
+
+## 2026-10-14 — Identidade visual em risografia
+
+- **Estilo de risografia a partir do logo do André:** papel creme, duas tintas (o verde e o rosa do logo), grão de impressão e a segunda cor levemente fora de registro nos títulos, cartões e botões. Os componentes ficam em `app/ui/Riso.kt` (`RisoTheme`, `RisoCard`, `RisoButton`, `RisoChip`, `RisoTitle`), e o tema do Material é mapeado para a mesma paleta, para campos e sliders combinarem.
+- **Fontes empacotadas, não baixadas em tempo de execução:** Bagel Fat One para títulos (redonda e gorda como o logo) e Rubik para o texto, as duas com licença OFL (em `docs/licencas`). Foram cortadas para o alfabeto latino, com cerca de 50 KB cada, e o app não depende do Google Play Services para as fontes.
+- **O grão é gerado no código**, como uma textura pequena repetida, e não como imagem; assim ele funciona em qualquer tamanho de tela e no modo escuro.
+- **Ícone adaptativo com o logo**, com fundo de papel sempre claro e uma versão monocromática para os ícones temáticos do One UI.
