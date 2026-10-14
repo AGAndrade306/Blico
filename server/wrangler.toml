@@ -17,3 +17,10 @@ DAILY_LIMIT = "300"
 # Segredos (nunca neste arquivo):
 #   npx wrangler secret put ANTHROPIC_API_KEY
 #   npx wrangler secret put DEVICE_TOKEN
+
+# Prévias por PR da integração da Cloudflare com o GitHub (`wrangler preview`).
+# O bloco precisa existir e não pode ficar vazio no build da Cloudflare. Segredos de prévia
+# são separados (`npx wrangler preview secret put`); sem eles a prévia só responde /health.
+[previews.vars]
+MODEL = "claude-haiku-5-5"
+DAILY_LIMIT = "50"

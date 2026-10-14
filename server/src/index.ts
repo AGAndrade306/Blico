@@ -35,11 +35,14 @@ async function withinDailyLimit(env: Env): Promise<boolean> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname === "/health") return json(200, { ok: true });
+    // Só diz se os segredos existem, nunca o valor. Ajuda a conferir a configuração pelo navegador.
+    if (url.pathname === "/health") return json(200, { ok: true, token: Boolean(env.DEVICE_TOKEN?.trim()), chave: Boolean(env.ANTHROPIC_API_KEY?.trim()) });
     if (url.pathname !== "/v1/plan" || request.method !== "POST") return json(404, { error: "não encontrado" });
 
-    const auth = request.headers.get("authorization") ?? "";
-    if (!env.DEVICE_TOKEN || !sameToken(auth, `Bearer ${env.DEVICE_TOKEN}`)) return json(401, { error: "não autorizado" });
+    const expected = env.DEVICE_TOKEN?.trim();
+    if (!expected) return json(503, { error: "DEVICE_TOKEN não configurado no servidor" });
+    const auth = (request.headers.get("authorization") ?? "").trim();
+    if (!sameToken(auth, `Bearer ${expected}`)) return json(401, { error: "não autorizado" });
     if (!(await withinDailyLimit(env))) return json(429, { error: "limite diário atingido" });
 
     let req;
@@ -51,7 +54,7 @@ export default {
 
     const started = Date.now();
     try {
-      const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 1, timeout: 20_000 });
+      const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY?.trim(), maxRetries: 1, timeout: 20_000 });
       const result = await plan(client, env.MODEL || "claude-haiku-5-5", req);
       // Só metadados no log: nunca o texto do pedido nem a resposta.
       console.log(JSON.stringify({ ms: Date.now() - started, tools: req.tools.length, calls: result.calls.map((c) => c.tool), answered: result.answer !== null }));
