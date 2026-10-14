@@ -125,6 +125,11 @@ internal fun AssistantOverlay(
                                 }
                             }
                         }
+                        // Arquivos encontrados: as ações voltam como chamadas, iguais às de voz.
+                        if (out is Outcome.Files) {
+                            Spacer(Modifier.height(8.dp))
+                            FileResults(out.items, onAction = onChoose)
+                        }
                         // Classe 2: o texto vem do resumo estruturado, nunca do modelo.
                         if (out is Outcome.Confirm) {
                             Spacer(Modifier.height(8.dp))

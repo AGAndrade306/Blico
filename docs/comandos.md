@@ -16,5 +16,6 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "timer de 5 minutos", "cronômetro de meia hora" | Inicia o timer. |
 | "pesquisa preço do dólar" | Pesquisa na internet. |
 | "abre a câmera" | Abre qualquer app pelo nome. |
+| "acha o pdf do contrato", "fotos de ontem", "cadê a planilha de gastos", "procura o arquivo relatório desta semana" | Lista os arquivos no cartão. Toque num item para abrir, compartilhar ou renomear. Renomear pede um toque em Confirmar. |
 
 O que não está na lista vai para a nuvem, se o servidor estiver configurado na tela inicial do app. A nuvem pode escolher uma das ferramentas acima (com as mesmas regras de confirmação) ou responder uma pergunta em voz alta ("quem escreveu Dom Casmurro?"). Antes de sair do aparelho, nomes de contatos, telefones, e-mails e endereços salvos são trocados por apelidos e restaurados na volta. Sem servidor configurado, a resposta continua sendo "Ainda não sei fazer isso".

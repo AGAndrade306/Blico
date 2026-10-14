@@ -19,6 +19,9 @@ sealed interface Outcome {
     data class Answer(override val spoken: String) : Outcome
 
     data class NotUnderstood(override val spoken: String) : Outcome
+
+    /** Arquivos encontrados; o cartão lista e oferece abrir, compartilhar e renomear. */
+    data class Files(override val spoken: String, val items: List<FileItem>) : Outcome
 }
 
 /**
@@ -32,7 +35,7 @@ class Assistant(
     private val minConfidence: Double = 0.6,
 ) {
     suspend fun handle(text: String, ctx: ExecContext): Outcome {
-        val request = LlmRequest(text, registry.all.toList())
+        val request = LlmRequest(text, registry.all.filter { it.exposedToModels })
         var failure: Throwable? = null
         for (provider in providers) {
             val decision = try {
@@ -68,6 +71,7 @@ class Assistant(
             is ToolResult.Success -> Outcome.Done(r.spoken, call)
             is ToolResult.Failure -> Outcome.Failed(r.spoken, r.reason)
             is ToolResult.NeedsChoice -> Outcome.Choose(r.question, r.options)
+            is ToolResult.Files -> Outcome.Files(r.spoken, r.items)
         }
     }
 }

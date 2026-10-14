@@ -5,7 +5,9 @@ import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,7 +15,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +29,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Slider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -32,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,9 +49,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.blico.assistant.FileResults
 import app.blico.core.Outcome
 import app.blico.memory.PrefsPlaceBook
 import app.blico.voice.ListeningState
+import app.blico.voice.VoiceOption
+import app.blico.voice.VoicePrefs
 import app.blico.voice.OnDeviceTranscriber
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -146,8 +158,17 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = { askContacts.launch(Manifest.permission.READ_CONTACTS) }) { Text("Permitir contatos") }
             }
 
+            Step(
+                title = "6. Arquivos",
+                done = Environment.isExternalStorageManager(),
+                detail = "Para \"acha o pdf do contrato\" e \"fotos de ontem\". A busca é feita no celular e nada sai dele.",
+            ) {
+                Button(onClick = ::openAllFilesAccess) { Text("Liberar acesso aos arquivos") }
+            }
+
             Places()
             Cloud()
+            VoiceSettings()
 
             Spacer(Modifier.height(8.dp))
             ListenTest(transcriber, enabled = micGranted)
@@ -268,6 +289,25 @@ class MainActivity : ComponentActivity() {
                     }
                 }) { Text("Executar") }
                 result?.let { Text(it.spoken, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp)) }
+                (result as? Outcome.Files)?.let { files ->
+                    FileResults(files.items) { call ->
+                        scope.launch {
+                            val out = app.assistant.execute(call, app.execContext { startActivity(it) })
+                            result = out
+                            app.say(out.spoken)
+                        }
+                    }
+                }
+                (result as? Outcome.Confirm)?.let { confirm ->
+                    confirm.summary.fields.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodyMedium) }
+                    Button(onClick = {
+                        scope.launch {
+                            val out = app.assistant.execute(confirm.call, app.execContext { startActivity(it) }, confirmed = true)
+                            result = out
+                            app.say(out.spoken)
+                        }
+                    }) { Text("Confirmar") }
+                }
             }
         }
     }
@@ -319,6 +359,99 @@ class MainActivity : ComponentActivity() {
     )
 
     private fun openSideKeySettings() = openFirst(Intent(Settings.ACTION_SETTINGS))
+
+    private fun openAllFilesAccess() = openFirst(
+        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.fromParts("package", packageName, null)),
+        Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+    )
+
+    /** Tela do sistema com os motores de voz, para instalar vozes novas. */
+    private fun openTtsSettings() = openFirst(Intent("com.android.settings.TTS_SETTINGS"), Intent(Settings.ACTION_SETTINGS))
+
+    /** Motor, voz, velocidade e tom. Só aparecem vozes que funcionam sem internet. */
+    @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+    @Composable
+    private fun VoiceSettings() {
+        val app = application as BlicoApp
+        val scope = rememberCoroutineScope()
+        var prefs by remember { mutableStateOf(app.voicePrefs) }
+        val engines = remember { app.speech.engines() }
+        val currentEngine = prefs.engine ?: app.speech.defaultEngine()
+        var voices by remember { mutableStateOf<List<VoiceOption>?>(null) }
+        LaunchedEffect(currentEngine) { voices = null; voices = app.speech.voices() }
+
+        fun update(p: VoicePrefs) {
+            prefs = p
+            app.voicePrefs = p
+        }
+
+        Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Voz", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Escolha o motor e a voz. Só aparecem vozes que funcionam sem internet, para o que o Blico fala não sair do celular.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (engines.size > 1) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Motor", style = MaterialTheme.typography.labelLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        engines.forEach { e ->
+                            FilterChip(
+                                selected = e.packageName == currentEngine,
+                                onClick = { update(prefs.copy(engine = e.packageName, voice = null)) },
+                                label = { Text(e.label) },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Voz", style = MaterialTheme.typography.labelLarge)
+                val list = voices
+                when {
+                    list == null -> Text("Carregando vozes…", style = MaterialTheme.typography.bodySmall)
+                    list.isEmpty() -> Text(
+                        "Esse motor não tem voz em português instalada. Instale em Configurações de voz.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = prefs.voice == null, onClick = { update(prefs.copy(voice = null)) }, label = { Text("Padrão") })
+                        list.forEach { v ->
+                            FilterChip(
+                                selected = prefs.voice == v.name,
+                                onClick = {
+                                    update(prefs.copy(voice = v.name))
+                                    app.say("Oi, eu sou o Blico. Essa é a minha voz.")
+                                },
+                                label = { Text(v.label) },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Velocidade: ${"%.1f".format(prefs.rate)}x", style = MaterialTheme.typography.labelLarge)
+                Slider(
+                    value = prefs.rate,
+                    onValueChange = { prefs = prefs.copy(rate = it) },
+                    onValueChangeFinished = { update(prefs) },
+                    valueRange = 0.7f..1.6f,
+                    steps = 8,
+                )
+                Text("Tom: ${"%.1f".format(prefs.pitch)}", style = MaterialTheme.typography.labelLarge)
+                Slider(
+                    value = prefs.pitch,
+                    onValueChange = { prefs = prefs.copy(pitch = it) },
+                    onValueChangeFinished = { update(prefs) },
+                    valueRange = 0.7f..1.3f,
+                    steps = 5,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { scope.launch { app.speech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } }) { Text("Ouvir") }
+                    OutlinedButton(onClick = ::openTtsSettings) { Text("Instalar mais vozes") }
+                }
+            }
+        }
+    }
 
     private fun openFirst(vararg intents: Intent) {
         for (intent in intents) {

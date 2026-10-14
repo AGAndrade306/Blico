@@ -12,7 +12,7 @@ import app.blico.core.ToolResult
 fun builtinTools(): List<Tool> = listOf(
     AbrirApp, SpotifyTocar, WhatsAppPreparar, Ligar, UberPreparar, NoventaENoveAbrir,
     IfoodAbrir, Navegar, Alarme, Timer, BuscarWeb,
-)
+) + fileTools()
 
 internal object AbrirApp : BaseTool(
     name = "abrir_app",
