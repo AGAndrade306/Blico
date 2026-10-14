@@ -66,3 +66,4 @@ O fundo escuro do modo noturno ficou difícil de ler. A tela do app usa sempre o
 - **Amostragem determinística** (topK 1, temperatura 0) e conversa nova por pedido: o mesmo pedido escolhe sempre a mesma ferramenta, sem histórico misturando pedidos.
 - **GPU primeiro, CPU de reserva.** Se o driver recusar a GPU, o motor carrega na CPU. O modelo começa a carregar quando o cartão abre, enquanto a pessoa fala.
 - **Benchmark de 100 comandos** em `core/src/main/resources/benchmark/comandos.tsv`: ações ditas de jeitos que as regras não cobrem, perguntas de conhecimento geral e perguntas que precisam de informação atual (o certo é passar a vez). Roda no app, em Testar.
+- **Kotlin 2.4.20.** O LiteRT-LM 0.18 é compilado com Kotlin 2.4 e traz o `kotlin-stdlib` 2.4; o compilador 2.2 não lê esses metadados.
