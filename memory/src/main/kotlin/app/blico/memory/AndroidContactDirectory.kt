@@ -35,6 +35,17 @@ class AndroidContactDirectory(private val context: Context) : ContactDirectory {
         rank(wanted, all)
     }
 
+    override suspend fun names(): List<String> = withContext(Dispatchers.IO) {
+        if (context.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            return@withContext emptyList()
+        }
+        val names = mutableListOf<String>()
+        context.contentResolver.query(Phone.CONTENT_URI, arrayOf(Phone.DISPLAY_NAME_PRIMARY), null, null, null)?.use { c ->
+            while (c.moveToNext()) c.getString(0)?.let(names::add)
+        }
+        names.distinct()
+    }
+
     private companion object {
         fun simplify(s: String): String =
             Normalizer.normalize(s.lowercase().trim(), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")

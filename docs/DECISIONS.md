@@ -26,3 +26,13 @@ Cada decisão técnica, com data e motivo. Mudar uma delas exige uma nova entrad
 - **99 e iFood só abrem o app** até o levantamento dos deep links no aparelho.
 - **Lugares (casa, trabalho) em SharedPreferences privadas**, sem criptografia por enquanto; a criptografia entra com a memória em arquivos.
 - **Roadmap renumerado:** o cérebro híbrido (modelo local + servidor + nuvem) passa a ser a Etapa 3.
+
+## 2026-10-14 — Etapa 3: nuvem via Cloudflare Workers
+
+- **Servidor em Cloudflare Workers (TypeScript, `server/`)**, e não Ktor no Cloud Run. Escolha do André: plano gratuito generoso, deploy com um comando e sem servidor para manter. Por isso o servidor não compartilha código com `core`; o contrato é o JSON de `CloudProtocol`, testado dos dois lados.
+- **A chave da Anthropic e o token do aparelho são segredos do Worker** (`wrangler secret put`), nunca no repositório nem no APK. O app guarda só a URL e o token do aparelho, este cifrado com uma chave do Android Keystore (`SecretStore`).
+- **Modelo `claude-haiku-5-5` com esforço baixo**, uma ferramenta por vez (`disable_parallel_tool_use`). Motivo: a tarefa é escolher uma ferramenta ou responder curto, e latência importa mais que profundidade. O modelo é uma variável do `wrangler.toml`.
+- **Mascaramento no aparelho (`RedactingProvider`)**: antes do envio, endereços salvos viram `endereco_<apelido>` e nomes de contatos viram `contato_N`, além do `Redactor` para telefones e e-mails; a volta restaura os valores nos argumentos. A nuvem nunca vê a agenda inteira, só o pedido.
+- **A nuvem também responde perguntas** (`LlmDecision.answer`), e o app fala a resposta. As ferramentas pedidas pela nuvem passam pela mesma `RiskPolicy` das regras.
+- **Limite diário opcional por KV** e logs só com metadados (latência, quantas ferramentas foram oferecidas, qual foi escolhida), nunca o texto do pedido.
+- **O modelo local fica para a Etapa 3b**, porque o LiteRT-LM depende do Google Maven, que este ambiente de desenvolvimento não alcança; a nuvem entrega valor antes.

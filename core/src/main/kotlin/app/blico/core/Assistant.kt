@@ -1,5 +1,7 @@
 package app.blico.core
 
+import kotlinx.coroutines.CancellationException
+
 /** O que o Blico mostra e fala depois de um pedido. */
 sealed interface Outcome {
     val spoken: String
@@ -12,6 +14,9 @@ sealed interface Outcome {
     data class Confirm(override val spoken: String, val summary: ConfirmationSummary, val call: ToolCall) : Outcome
 
     data class Failed(override val spoken: String, val reason: String) : Outcome
+
+    /** Resposta a uma pergunta: o Blico só fala, não executa nada. */
+    data class Answer(override val spoken: String) : Outcome
 
     data class NotUnderstood(override val spoken: String) : Outcome
 }
@@ -28,11 +33,25 @@ class Assistant(
 ) {
     suspend fun handle(text: String, ctx: ExecContext): Outcome {
         val request = LlmRequest(text, registry.all.toList())
-        val call = providers.firstNotNullOfOrNull { provider ->
-            val decision = runCatching { provider.chooseTools(request) }.getOrNull()
-            decision?.takeIf { it.confidence >= minConfidence }?.calls?.firstOrNull()
-        } ?: return Outcome.NotUnderstood("Ainda não sei fazer isso")
-        return execute(call, ctx)
+        var failure: Throwable? = null
+        for (provider in providers) {
+            val decision = try {
+                provider.chooseTools(request)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failure = e
+                continue
+            }
+            if (decision.confidence < minConfidence) continue
+            decision.calls.firstOrNull()?.let { return execute(it, ctx) }
+            decision.answer?.let { return Outcome.Answer(it) }
+        }
+        return when (failure) {
+            is CloudUnavailable -> Outcome.Failed("Não consegui falar com a nuvem. ${failure.message}", failure.toString())
+            null -> Outcome.NotUnderstood("Ainda não sei fazer isso")
+            else -> Outcome.Failed("Não consegui entender agora, tente de novo", failure.toString())
+        }
     }
 
     /** Executa uma chamada já decidida: depois de uma escolha ou do toque em Confirmar ([confirmed]). */

@@ -1,0 +1,19 @@
+name = "blico"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Modelo padrão: rápido e barato para escolher ferramentas. Troque por claude-sonnet-5-5 para planos longos.
+MODEL = "claude-haiku-5-5"
+DAILY_LIMIT = "300"
+
+# Contador diário de pedidos. Crie com: npx wrangler kv namespace create USAGE
+# e cole o id abaixo. Sem ele, o servidor funciona sem limite diário.
+# [[kv_namespaces]]
+# binding = "USAGE"
+# id = "cole-o-id-aqui"
+
+# Segredos (nunca neste arquivo):
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put DEVICE_TOKEN
