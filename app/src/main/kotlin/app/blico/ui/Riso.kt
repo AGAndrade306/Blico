@@ -120,9 +120,10 @@ private fun typography(): Typography {
     )
 }
 
+/** [dark] nulo segue o sistema; o app fixa o papel claro, que é mais fácil de ler. */
 @Composable
-fun RisoTheme(content: @Composable () -> Unit) {
-    val p = if (isSystemInDarkTheme()) DarkRiso else LightRiso
+fun RisoTheme(dark: Boolean? = null, content: @Composable () -> Unit) {
+    val p = if (dark ?: isSystemInDarkTheme()) DarkRiso else LightRiso
     val scheme = if (p.dark) {
         darkColorScheme(
             primary = p.green, onPrimary = p.onGreen, secondary = p.pink, onSecondary = p.onGreen,
