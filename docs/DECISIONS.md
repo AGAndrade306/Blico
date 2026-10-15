@@ -88,3 +88,8 @@ André pediu para não ter que tocar em "enviar" no WhatsApp nem no botão de li
 - **Botão enviar pelo id `com.whatsapp:id/send`**, com a descrição "Enviar" como reserva, e a caixa pelo id `com.whatsapp:id/entry`. São os ids públicos do WhatsApp há anos; se mudarem, o Blico não envia e deixa a mensagem pronta, avisando por voz.
 - **Ligado por padrão quando a pessoa libera** (permissão ou acessibilidade), com a opção "Só deixar pronto" no cartão da tela inicial.
 - **No Android 13+ um APK instalado fora da loja precisa de "Permitir configurações restritas"** antes de ligar a acessibilidade; a tela explica o caminho.
+
+## 2026-10-15 — Busca no DuckDuckGo e benchmark visível
+
+- **Pesquisas vão para o DuckDuckGo**, por privacidade: ele não monta perfil de quem pesquisa. Abre no app do DuckDuckGo se estiver instalado; senão, no navegador padrão. Antes, a busca ia para o app de busca do sistema (o Google).
+- **O benchmark roda no escopo do app, não da tela** (`BenchmarkRunner`). Com o Gemma, 100 pedidos levam minutos; antes, sair da tela cancelava sem mostrar nada. Agora os resultados aparecem um a um (✓ ou ✗, o que veio e o tempo), e o resumo e os erros do último benchmark completo ficam guardados.

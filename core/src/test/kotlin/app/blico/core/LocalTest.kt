@@ -127,8 +127,15 @@ class LocalTest {
             }
         }
         var t = 0L
-        val report = Benchmark.run(brain, cases, tools, now = { t += 500; t })
+        val seen = mutableListOf<Benchmark.Result>()
+        val report = Benchmark.run(brain, cases, tools, now = { t += 500; t }, onResult = { seen += it })
+        assertEquals(report.results, seen)
         assertEquals(3, report.passed)
+        assertEquals("timer (segundos=600)", report.results[0].got(0.6))
+        assertEquals("“Leonardo da Vinci.”", report.results[1].got(0.6))
+        assertEquals("passou a vez", report.results[2].got(0.6))
+        assertEquals("erro: travou", report.results[3].got(0.6))
+        assertEquals("alarme (hora≈7)", report.results[3].wanted)
         assertEquals("travou", report.results.last().error?.substringAfter(": "))
         assertEquals(mapOf("ações" to (1 to 2), "perguntas" to (1 to 1), "passar para a nuvem" to (1 to 1)), report.byGroup())
         assertTrue(report.summary().startsWith("Acertou 3 de 4"), report.summary())

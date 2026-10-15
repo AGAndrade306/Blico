@@ -27,6 +27,23 @@ object Benchmark {
 
     data class Result(val case: Case, val decision: LlmDecision?, val millis: Long, val error: String? = null) {
         fun passed(minConfidence: Double): Boolean = decision != null && passes(case, decision, minConfidence)
+
+        /** O que o cérebro fez, numa linha: a ferramenta e os argumentos, a resposta ou "passou a vez". */
+        fun got(minConfidence: Double): String = when {
+            error != null -> "erro: ${error.substringAfter(": ")}"
+            decision == null -> "nada"
+            decision.confidence < minConfidence -> "passou a vez"
+            else -> decision.calls.firstOrNull()?.let { c -> c.tool + c.args.entries.joinToString(", ", " (", ")") { "${it.key}=${it.value}" }.takeIf { c.args.isNotEmpty() }.orEmpty() }
+                ?: decision.answer?.let { "“${it.take(80)}”" }
+                ?: "nada"
+        }
+
+        /** O que era esperado, numa linha. */
+        val wanted: String get() = when (val e = case.expected) {
+            is Expected.Call -> e.tool + e.args.entries.joinToString(", ", " (", ")") { "${it.key}≈${it.value}" }.takeIf { e.args.isNotEmpty() }.orEmpty()
+            Expected.Answer -> "responder"
+            Expected.Escalate -> "passar a vez"
+        }
     }
 
     data class Report(val results: List<Result>, val minConfidence: Double) {
@@ -97,6 +114,7 @@ object Benchmark {
         minConfidence: Double = 0.6,
         now: () -> Long = System::currentTimeMillis,
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
+        onResult: (Result) -> Unit = {},
     ): Report {
         val results = cases.mapIndexed { i, case ->
             val start = now()
@@ -107,6 +125,7 @@ object Benchmark {
             } catch (e: Exception) {
                 Result(case, null, now() - start, e.toString())
             }
+            onResult(result)
             onProgress(i + 1, cases.size)
             result
         }

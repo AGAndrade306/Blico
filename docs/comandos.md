@@ -14,7 +14,7 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "me leva pro aeroporto", "como chego no shopping" | Navegação no Google Maps. |
 | "me acorda às 7", "alarme para seis e meia", "8 da noite" | Cria o alarme. |
 | "timer de 5 minutos", "cronômetro de meia hora" | Inicia o timer. |
-| "pesquisa preço do dólar" | Pesquisa na internet. |
+| "pesquisa preço do dólar" | Pesquisa no DuckDuckGo (no app dele, se estiver instalado, ou no navegador). |
 | "abre a câmera" | Abre qualquer app pelo nome. |
 | "acha o pdf do contrato", "fotos de ontem", "cadê a planilha de gastos", "procura o arquivo relatório desta semana" | Lista os arquivos no cartão. Toque num item para abrir, compartilhar ou renomear. Renomear pede um toque em Confirmar. |
 
