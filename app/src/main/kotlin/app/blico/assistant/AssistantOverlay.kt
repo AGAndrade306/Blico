@@ -139,7 +139,7 @@ internal fun AssistantOverlay(
                             Spacer(Modifier.height(10.dp))
                             out.summary.fields.forEach { (k, v) ->
                                 Row(Modifier.padding(vertical = 2.dp)) {
-                                    Text(k, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.width(64.dp))
+                                    Text(k, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.width(84.dp))
                                     Text(v, style = MaterialTheme.typography.bodyMedium, color = p.text)
                                 }
                             }

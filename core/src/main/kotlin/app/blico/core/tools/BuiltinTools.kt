@@ -1,6 +1,8 @@
 package app.blico.core.tools
 
+import app.blico.core.ConfirmationSummary
 import app.blico.core.Contact
+import app.blico.core.DeviceResult
 import app.blico.core.DeviceAction
 import app.blico.core.ExecContext
 import app.blico.core.RiskClass
@@ -10,7 +12,7 @@ import app.blico.core.ToolResult
 
 /** Todas as ferramentas que o Blico tem hoje. */
 fun builtinTools(): List<Tool> = listOf(
-    AbrirApp, SpotifyTocar, WhatsAppPreparar, Ligar, UberPreparar, NoventaENoveAbrir,
+    AbrirApp, SpotifyTocar, WhatsAppPreparar, WhatsAppEnviar, Ligar, LigarAgora, UberPreparar, NoventaENoveAbrir,
     IfoodAbrir, Navegar, Alarme, Timer, BuscarWeb,
 ) + fileTools()
 
@@ -80,6 +82,10 @@ internal object WhatsAppPreparar : BaseTool(
     override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
         val texto = call.arg("texto").orEmpty()
         return when (val r = resolveContact(call, ctx)) {
+            // Envio direto liberado: o próximo passo é enviar, e ele passa pelo cartão Confirmar.
+            is Resolved.One if ctx.direct.whatsapp && texto.isNotEmpty() -> ToolResult.Then(
+                ToolCall(WhatsAppEnviar.name, mapOf("contato" to r.name, "telefone" to r.phone, "texto" to texto)),
+            )
             is Resolved.One -> {
                 val uri = buildString {
                     append("https://api.whatsapp.com/send?phone=").append(phoneForWhatsApp(r.phone))
@@ -102,6 +108,36 @@ internal object WhatsAppPreparar : BaseTool(
     }
 }
 
+/**
+ * Envia de verdade: abre a conversa com o texto e toca em enviar pela acessibilidade.
+ * Só nasce de [WhatsAppPreparar] com o número já achado, e só roda depois do Confirmar.
+ */
+internal object WhatsAppEnviar : BaseTool(
+    name = "whatsapp_enviar",
+    description = "Envia uma mensagem no WhatsApp para um número já confirmado",
+    risk = RiskClass.COMMIT,
+    apps = setOf(Apps.WHATSAPP),
+    params = mapOf("contato" to "nome do contato", "telefone" to "número", "texto" to "mensagem"),
+    required = setOf("contato", "telefone", "texto"),
+) {
+    override val exposedToModels = false
+
+    override fun summarize(call: ToolCall) = ConfirmationSummary(
+        title = "Mandar para ${call.arg("contato")} no WhatsApp",
+        fields = listOf("Para" to "${call.arg("contato")} · ${call.arg("telefone")}", "Mensagem" to call.arg("texto").orEmpty()),
+    )
+
+    override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
+        val nome = call.arg("contato")!!
+        return when (val r = ctx.device.perform(DeviceAction.SendWhatsApp(phoneForWhatsApp(call.arg("telefone")!!), call.arg("texto")!!))) {
+            DeviceResult.Done -> ToolResult.Success("Enviei para $nome.")
+            is DeviceResult.NotInstalled -> r.toToolResult("")
+            // A conversa ficou aberta com o texto: sem o toque automático, falta só o seu.
+            is DeviceResult.Failed -> ToolResult.Failure(r.reason, "Não consegui enviar sozinho. A mensagem para $nome ficou pronta, toque em enviar.")
+        }
+    }
+}
+
 internal object Ligar : BaseTool(
     name = "ligar",
     description = "Abre o discador com o número do contato, sem ligar",
@@ -113,6 +149,8 @@ internal object Ligar : BaseTool(
 ) {
     override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult =
         when (val r = resolveContact(call, ctx)) {
+            is Resolved.One if ctx.direct.calls ->
+                ToolResult.Then(ToolCall(LigarAgora.name, mapOf("contato" to r.name, "telefone" to r.phone)))
             is Resolved.One -> ctx.device.perform(DeviceAction.Dial(r.phone))
                 .toToolResult("Número de ${r.name} no discador. Toque para ligar.")
             is Resolved.Many -> ToolResult.NeedsChoice(
@@ -123,6 +161,36 @@ internal object Ligar : BaseTool(
             )
             Resolved.None -> ToolResult.Failure("contato não encontrado", "Não achei ${call.arg("contato")} na agenda")
         }
+}
+
+/** Completa a ligação. Só nasce de [Ligar] com o número já achado, e só roda depois do Confirmar. */
+internal object LigarAgora : BaseTool(
+    name = "ligar_agora",
+    description = "Liga para um número já confirmado",
+    risk = RiskClass.COMMIT,
+    apps = emptySet(),
+    params = mapOf("contato" to "nome do contato", "telefone" to "número"),
+    required = setOf("contato", "telefone"),
+) {
+    override val exposedToModels = false
+
+    override fun summarize(call: ToolCall) = ConfirmationSummary(
+        title = "Ligar para ${call.arg("contato")}",
+        fields = listOf("Número" to call.arg("telefone")!!),
+    )
+
+    override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
+        val nome = call.arg("contato")!!
+        val numero = call.arg("telefone")!!
+        return when (val r = ctx.device.perform(DeviceAction.Call(numero))) {
+            DeviceResult.Done -> ToolResult.Success("Ligando para $nome.")
+            // Sem a permissão de ligar, o número vai para o discador, como antes.
+            else -> {
+                ctx.device.perform(DeviceAction.Dial(numero))
+                ToolResult.Failure((r as? DeviceResult.Failed)?.reason ?: "sem como ligar", "Não consegui ligar direto. O número de $nome está no discador.")
+            }
+        }
+    }
 }
 
 internal object UberPreparar : BaseTool(

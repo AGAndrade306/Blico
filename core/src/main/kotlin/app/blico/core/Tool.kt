@@ -24,7 +24,24 @@ sealed interface ToolResult {
 
     /** Resultado de uma busca: a lista aparece no cartão, e cada item tem as próprias ações. */
     data class Files(val spoken: String, val items: List<FileItem>) : ToolResult
+
+    /**
+     * A ferramenta preparou tudo e o próximo passo é outra chamada, por exemplo enviar de fato
+     * depois de achar o número. A [call] passa pela política de risco como qualquer outra.
+     */
+    data class Then(val call: ToolCall) : ToolResult
 }
+
+/**
+ * O que a pessoa liberou para o Blico fazer até o fim, em vez de deixar pronto.
+ * Cada ação direta ainda passa pelo cartão Confirmar (classe 2).
+ */
+data class DirectActions(
+    /** Tocar em enviar no WhatsApp, pelo serviço de acessibilidade. */
+    val whatsapp: Boolean = false,
+    /** Completar a ligação, com a permissão de fazer chamadas. */
+    val calls: Boolean = false,
+)
 
 /** O que uma ferramenta precisa do mundo lá fora. No app são implementações Android; nos testes, fakes. */
 data class ExecContext(
@@ -34,6 +51,7 @@ data class ExecContext(
     val places: PlaceBook,
     val files: FileIndex = FileIndex.None,
     val clock: java.time.Clock = java.time.Clock.systemDefaultZone(),
+    val direct: DirectActions = DirectActions(),
 )
 
 interface Tool {

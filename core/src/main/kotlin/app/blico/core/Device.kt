@@ -14,6 +14,15 @@ sealed interface DeviceAction {
     /** Abre o discador com o número preenchido. Não liga sozinho. */
     data class Dial(val number: String) : DeviceAction
 
+    /** Completa a ligação. Só depois do toque em Confirmar. */
+    data class Call(val number: String) : DeviceAction
+
+    /**
+     * Abre a conversa com [text] na caixa e toca em enviar, pela acessibilidade.
+     * Só toca se o texto na tela for exatamente [text]. [phone] só com dígitos e DDI.
+     */
+    data class SendWhatsApp(val phone: String, val text: String) : DeviceAction
+
     data class SetAlarm(val hour: Int, val minute: Int, val label: String? = null) : DeviceAction
 
     data class SetTimer(val seconds: Int, val label: String? = null) : DeviceAction
@@ -39,6 +48,18 @@ sealed interface DeviceResult {
     data class NotInstalled(val what: String) : DeviceResult
 
     data class Failed(val reason: String) : DeviceResult
+}
+
+/** Regras do envio direto que não dependem do Android. */
+object DirectSend {
+    /**
+     * O texto na caixa do app é o que foi confirmado? Espaços e quebras de linha nas pontas
+     * e repetidos não contam; o resto, sim (letra, acento, pontuação).
+     */
+    fun sameText(onScreen: String?, confirmed: String): Boolean =
+        onScreen != null && normalize(onScreen) == normalize(confirmed) && normalize(confirmed).isNotEmpty()
+
+    private fun normalize(s: String) = s.replace(Regex("\\s+"), " ").trim()
 }
 
 interface DeviceGateway {

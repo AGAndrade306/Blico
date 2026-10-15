@@ -69,13 +69,24 @@ class Assistant(
             Decision.Execute -> run(call, ctx)
         }
 
-    private suspend fun run(call: ToolCall, ctx: ExecContext): Outcome {
+    private suspend fun run(call: ToolCall, ctx: ExecContext, chained: Boolean = false): Outcome {
         val tool = registry[call.tool]!!
         return when (val r = runCatching { tool.run(call, ctx) }.getOrElse { ToolResult.Failure(it.toString(), "Não consegui, algo deu errado") }) {
             is ToolResult.Success -> Outcome.Done(r.spoken, call)
             is ToolResult.Failure -> Outcome.Failed(r.spoken, r.reason)
             is ToolResult.NeedsChoice -> Outcome.Choose(r.question, r.options)
             is ToolResult.Files -> Outcome.Files(r.spoken, r.items)
+            // O passo seguinte passa pela política: uma ação de classe 2 vira o cartão Confirmar.
+            // Um passo só, para uma ferramenta não encadear outra sem fim.
+            is ToolResult.Then -> if (chained) {
+                Outcome.Failed("Não consegui, algo deu errado", "encadeamento duplo: ${call.tool} → ${r.call.tool}")
+            } else {
+                when (val decision = policy.decide(r.call)) {
+                    is Decision.Refuse -> Outcome.Failed("Não posso fazer isso", decision.reason)
+                    is Decision.Confirm -> Outcome.Confirm(decision.summary.title + "?", decision.summary, r.call)
+                    Decision.Execute -> run(r.call, ctx, chained = true)
+                }
+            }
         }
     }
 }
