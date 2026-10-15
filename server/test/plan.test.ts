@@ -68,3 +68,36 @@ test("schema convertido sempre usa string", () => {
   const [t] = toAnthropicTools(tools);
   assert.deepEqual(t.input_schema.properties, { contato: { type: "string", description: "nome" }, texto: { type: "string", description: "mensagem" } });
 });
+
+test("agente: instruções vão no system e cada passo vira chamada e resultado", async () => {
+  const { client, sent } = fakeClient([{ type: "text", text: "Avisei contato_1." }]);
+  const r = await plan(client, "m", {
+    text: "avisa o contato_1",
+    tools,
+    instructions: "Seja breve.",
+    history: [{ tool: "whatsapp_enviar", args: { contato: "contato_1", texto: "oi" }, result: "<<<DADO_NAO_CONFIAVEL origem=ferramenta:whatsapp_enviar\nEnviei.\nDADO_NAO_CONFIAVEL>>>" }],
+  });
+  assert.equal(r.answer, "Avisei contato_1.");
+  assert.match(sent[0].system, /Instruções do agente[\s\S]*Seja breve\.$/);
+  const [user, call, result] = sent[0].messages;
+  assert.equal(user.content, "avisa o contato_1");
+  assert.deepEqual(call, { role: "assistant", content: [{ type: "tool_use", id: "passo_1", name: "whatsapp_enviar", input: { contato: "contato_1", texto: "oi" } }] });
+  assert.equal(result.content[0].tool_use_id, "passo_1");
+  assert.match(result.content[0].content, /^<<<DADO_NAO_CONFIAVEL/);
+});
+
+test("sem agente, o pedido segue como antes", async () => {
+  const { client, sent } = fakeClient([{ type: "text", text: "ok" }]);
+  await plan(client, "m", { text: "oi", tools });
+  assert.equal(sent[0].messages.length, 1);
+  assert.doesNotMatch(sent[0].system, /Instruções do agente/);
+});
+
+test("validação do histórico e das instruções", () => {
+  const step = { tool: "timer", args: { segundos: "60" }, result: "ok" };
+  assert.equal(parseRequest({ text: "oi", tools, instructions: null, history: [step] }).history?.length, 1);
+  assert.throws(() => parseRequest({ text: "oi", tools, history: Array(11).fill(step) }), BadRequest);
+  assert.throws(() => parseRequest({ text: "oi", tools, history: [{ ...step, args: { segundos: 60 } }] }), BadRequest);
+  assert.throws(() => parseRequest({ text: "oi", tools, history: [{ ...step, tool: "Errado!" }] }), BadRequest);
+  assert.throws(() => parseRequest({ text: "oi", tools, instructions: "x".repeat(4001) }), BadRequest);
+});

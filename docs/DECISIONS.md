@@ -88,3 +88,16 @@ André pediu para não ter que tocar em "enviar" no WhatsApp nem no botão de li
 - **Botão enviar pelo id `com.whatsapp:id/send`**, com a descrição "Enviar" como reserva, e a caixa pelo id `com.whatsapp:id/entry`. São os ids públicos do WhatsApp há anos; se mudarem, o Blico não envia e deixa a mensagem pronta, avisando por voz.
 - **Ligado por padrão quando a pessoa libera** (permissão ou acessibilidade), com a opção "Só deixar pronto" no cartão da tela inicial.
 - **No Android 13+ um APK instalado fora da loja precisa de "Permitir configurações restritas"** antes de ligar a acessibilidade; a tela explica o caminho.
+
+## 2026-10-15 — Agentes: laço próprio no `core`, sem framework
+
+André pediu agentes configuráveis no estilo do OpenClaw e do Hermes. O plano completo está em `plano/agentes.md` (pasta do projeto).
+
+- **Sem LangChain, CrewAI, OpenClaw ou Hermes no app.** São Python ou Node, pensados para um computador, e o OpenClaw e o Hermes recebem ordens por apps de mensagem (regra 6). Deles vêm só os formatos: agentes e skills em Markdown e memória em arquivos. O Koog (JetBrains, Kotlin, roda no Android) fica como plano B se o laço próprio crescer demais; não entrou agora porque traria o próprio formato de ferramenta e teríamos de reencaixar a política de risco, o cartão e o mascaramento.
+- **`AgentRunner` no `core`**: pede o próximo passo ao cérebro, executa pelo `Assistant.execute` (mesma `RiskPolicy`), devolve o resultado e repete até uma resposta, uma falha ou o limite de passos (padrão 5, teto 10). Um passo de cada vez. Classe 2 e escolhas pausam o laço (`AgentResult.paused`) e ele só continua com `resume` depois do toque; recusar o cartão encerra o agente.
+- **Só modelos no laço, sem as regras**: as regras entenderiam o mesmo pedido de novo a cada passo.
+- **O agente só usa as ferramentas que lista.** Fora delas, a chamada é recusada. As que só nascem de outra pelo cartão (whatsapp_enviar, ligar_agora) entram porque vêm do toque em Confirmar.
+- **Falha encerra o agente**, sem replanejar sozinho: a pessoa vê o erro e decide. O mesmo passo duas vezes seguidas também encerra (modelo andando em círculo).
+- **Resultados de ferramenta voltam ao cérebro como dado não confiável** (`UntrustedContent.wrap`), porque podem trazer nomes de arquivo, contatos ou texto lido do aparelho.
+- **O servidor continua sem estado.** A cada passo o app manda o pedido, as instruções do agente e o histórico curto; o Worker monta os passos como `tool_use`/`tool_result` e as instruções vão no `system`. O modelo local recebe o mesmo histórico em texto (`LocalBrain.userMessage`).
+- **Mascaramento numa passada só** (`Redactor.redactAll`): pedido, contexto, instruções e passos usam os mesmos apelidos, para o `telefone_1` do histórico ser o mesmo do pedido. Isso também corrige a colisão de apelidos que existia entre o pedido e o contexto.

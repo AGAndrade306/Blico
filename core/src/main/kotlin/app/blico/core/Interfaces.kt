@@ -5,6 +5,10 @@ data class LlmRequest(
     val text: String,
     val tools: List<Tool>,
     val context: List<String> = emptyList(),
+    /** Instruções do agente, escritas pelo dono do aparelho. Sem agente, nulo. */
+    val instructions: String? = null,
+    /** Passos que o agente já deu neste pedido, do mais antigo ao mais recente. */
+    val history: List<AgentStep> = emptyList(),
 )
 
 /**

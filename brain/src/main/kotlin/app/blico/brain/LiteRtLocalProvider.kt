@@ -65,7 +65,7 @@ class LiteRtLocalProvider(
                 maxOutputToken = MAX_OUTPUT_TOKENS,
             )
             engine.createConversation(config).use { conversation ->
-                val message = conversation.sendMessage(request.text)
+                val message = conversation.sendMessage(LocalBrain.userMessage(request))
                 LocalBrain.decide(
                     calls = message.toolCalls.map { LocalBrain.RawCall(it.name, it.arguments) },
                     text = message.contents.toString(),
