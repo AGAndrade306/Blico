@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import app.blico.brain.HttpCloudTransport
 import app.blico.brain.LiteRtLocalProvider
 import app.blico.brain.ModelStore
+import app.blico.core.AgentRunner
 import app.blico.core.Assistant
 import app.blico.core.CloudProvider
 import app.blico.core.DirectActions
@@ -19,6 +20,7 @@ import app.blico.core.tools.builtinTools
 import app.blico.executor.AndroidDeviceGateway
 import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
+import app.blico.memory.AgentStore
 import app.blico.memory.AndroidContactDirectory
 import app.blico.memory.PrefsPlaceBook
 import app.blico.memory.SecretStore
@@ -80,24 +82,29 @@ class BlicoApp : Application() {
     val models by lazy { ModelStore(this) }
     val local by lazy { LiteRtLocalProvider({ models.selectedFile() }, File(cacheDir, "litertlm")) }
 
+    /** O Gemma no aparelho e, se configurada e ligada, a nuvem, sempre mascarada. */
+    private val brains by lazy {
+        listOf(
+            OptionalProvider(local) { local.isReady() },
+            OptionalProvider(
+                RedactingProvider(CloudProvider(transport::post)) {
+                    RedactingProvider.entitiesFrom(contacts.names(), places.all())
+                },
+            ) { cloudFallback && cloudConfigured },
+        )
+    }
+
+    val registry by lazy { ToolRegistry(builtinTools()) }
+
     /**
      * Primeiro as regras (instantâneas); depois o Gemma no aparelho; só o que os dois não
      * resolvem vai para a nuvem, sempre mascarado, e só se ela estiver configurada e ligada.
      */
-    val assistant by lazy {
-        Assistant(
-            providers = listOf(
-                RuleRouter(),
-                OptionalProvider(local) { local.isReady() },
-                OptionalProvider(
-                    RedactingProvider(CloudProvider(transport::post)) {
-                        RedactingProvider.entitiesFrom(contacts.names(), places.all())
-                    },
-                ) { cloudFallback && cloudConfigured },
-            ),
-            registry = ToolRegistry(builtinTools()),
-        )
-    }
+    val assistant by lazy { Assistant(providers = listOf(RuleRouter()) + brains, registry = registry) }
+
+    /** Agentes em arquivo. Rodam só com os modelos: as regras repetiriam o mesmo pedido a cada passo. */
+    val agents by lazy { AgentStore(this) }
+    val agentRunner by lazy { AgentRunner(brains, assistant) }
 
     /** Carrega o modelo local enquanto a pessoa fala, para a resposta não esperar por isso. */
     fun warmUpLocal() {

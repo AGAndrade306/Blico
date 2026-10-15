@@ -17,6 +17,9 @@ data class AgentProfile(
     val instructions: String,
     val tools: Set<String> = emptySet(),
     val maxSteps: Int = DEFAULT_MAX_STEPS,
+    val description: String = "",
+    /** Frases que, ditas no pedido, chamam este agente. */
+    val triggers: List<String> = emptyList(),
 ) {
     init {
         require(maxSteps in 1..MAX_STEPS) { "max_passos precisa estar entre 1 e $MAX_STEPS" }

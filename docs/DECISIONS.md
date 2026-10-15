@@ -101,3 +101,11 @@ André pediu agentes configuráveis no estilo do OpenClaw e do Hermes. O plano c
 - **Resultados de ferramenta voltam ao cérebro como dado não confiável** (`UntrustedContent.wrap`), porque podem trazer nomes de arquivo, contatos ou texto lido do aparelho.
 - **O servidor continua sem estado.** A cada passo o app manda o pedido, as instruções do agente e o histórico curto; o Worker monta os passos como `tool_use`/`tool_result` e as instruções vão no `system`. O modelo local recebe o mesmo histórico em texto (`LocalBrain.userMessage`).
 - **Mascaramento numa passada só** (`Redactor.redactAll`): pedido, contexto, instruções e passos usam os mesmos apelidos, para o `telefone_1` do histórico ser o mesmo do pedido. Isso também corrige a colisão de apelidos que existia entre o pedido e o contexto.
+
+## 2026-10-15 — Agentes em arquivos Markdown
+
+- **Um arquivo por agente em `files/agentes/` (pasta privada do app)**, com cabeçalho curto (`nome`, `descricao`, `gatilhos`, `ferramentas`, `max_passos`) e as instruções em texto livre abaixo, no estilo das skills do OpenClaw e do Hermes. O formato é lido no `core` (`AgentFile`) e testado sem aparelho. Campo desconhecido é erro, para um erro de digitação não virar silêncio.
+- **Sem cifra por enquanto.** Os arquivos ficam na área privada do app, que só o Blico lê; a cifra entra junto com a memória em arquivos, para as duas usarem o mesmo esquema.
+- **Como um agente é chamado:** "agente <nome>, ..." (ou "usa o agente <nome>") ou um dos gatilhos dito no pedido, como palavra inteira, sem diferença de acento ou caixa. Sem agente, o pedido segue o caminho de sempre (regras, Gemma, nuvem).
+- **Dois agentes de exemplo criados na primeira vez** (`manha` com alarme e timer, `avisos` com WhatsApp), para servir de modelo. Podem ser editados ou apagados na tela.
+- **Tela de Agentes** em Personalizar: lista, edição do arquivo inteiro com validação ao salvar, novo agente a partir de um modelo e um teste digitado que mostra cada passo e o cartão Confirmar.
