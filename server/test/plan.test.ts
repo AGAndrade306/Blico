@@ -101,3 +101,10 @@ test("validação do histórico e das instruções", () => {
   assert.throws(() => parseRequest({ text: "oi", tools, history: [{ ...step, tool: "Errado!" }] }), BadRequest);
   assert.throws(() => parseRequest({ text: "oi", tools, instructions: "x".repeat(4001) }), BadRequest);
 });
+
+test("ferramenta do histórico fora do catálogo entra só como descrição e não pode ser chamada", async () => {
+  const { client, sent } = fakeClient([{ type: "tool_use", id: "t1", name: "whatsapp_enviar", input: {} }], "tool_use");
+  const r = await plan(client, "m", { text: "x", tools, history: [{ tool: "whatsapp_enviar", args: {}, result: "ok" }] });
+  assert.deepEqual(sent[0].tools.map((t: any) => t.name), ["whatsapp_preparar", "whatsapp_enviar"]);
+  assert.deepEqual(r.calls, []);
+});

@@ -128,6 +128,18 @@ export function toMessages(req: PlanRequest): Anthropic.MessageParam[] {
   return messages;
 }
 
+/**
+ * Ferramentas que aparecem no histórico e não estão no catálogo (as que só nascem de outra no
+ * aparelho, como whatsapp_enviar) entram com uma descrição mínima, para cada tool_use ter a sua.
+ */
+export function withHistoryTools(req: PlanRequest): DeviceTool[] {
+  const known = new Set(req.tools.map((t) => t.name));
+  const extra = [...new Set((req.history ?? []).map((s) => s.tool))]
+    .filter((name) => !known.has(name))
+    .map((name) => ({ name, description: "Ferramenta já usada neste pedido; não chame de novo.", parameters: { properties: {} } }));
+  return [...req.tools, ...extra];
+}
+
 /** Um pedido, uma resposta: o app executa as ferramentas, aqui só se decide qual. */
 export async function plan(client: Anthropic, model: string, req: PlanRequest): Promise<PlanResponse> {
   const response = await client.messages.create({
@@ -136,7 +148,7 @@ export async function plan(client: Anthropic, model: string, req: PlanRequest): 
     // Escolher uma ferramenta é tarefa curta: pouco raciocínio, resposta rápida.
     output_config: { effort: "low" },
     system: req.instructions?.trim() ? `${SYSTEM}\n\nInstruções do agente, escritas pelo dono do celular:\n${req.instructions.trim()}` : SYSTEM,
-    tools: toAnthropicTools(req.tools),
+    tools: toAnthropicTools(withHistoryTools(req)),
     tool_choice: { type: "auto", disable_parallel_tool_use: true },
     messages: toMessages(req),
   });

@@ -195,3 +195,112 @@ class AgentTest {
         assertEquals("Avisei João Silva no 11 98765-4321.", d.answer)
     }
 }
+
+class AgentTeamTest {
+    private val actions = mutableListOf<DeviceAction>()
+    private val device = object : DeviceGateway {
+        override suspend fun perform(action: DeviceAction): DeviceResult = DeviceResult.Done.also { actions += action }
+    }
+    private val contacts = object : ContactDirectory {
+        override suspend fun find(query: String) =
+            if (query.lowercase() == "joão") listOf(Contact("João Silva", "(11) 98765-4321")) else emptyList()
+    }
+    private val places = object : PlaceBook {
+        override fun resolve(alias: String): String? = null
+    }
+    private fun ctx() = ExecContext("t", device, contacts, places, direct = DirectActions(whatsapp = true))
+    private val assistant = Assistant(listOf(RuleRouter()), ToolRegistry(builtinTools()))
+
+    private val manha = AgentProfile("manha", "Alarmes.", tools = setOf("alarme", "timer"), description = "Põe alarmes")
+    private val avisos = AgentProfile("avisos", "Mensagens.", tools = setOf("whatsapp_preparar"))
+    private val chefe = AgentProfile("organizador", "Divida.", tools = setOf("navegar"), team = listOf("manha", "avisos", "fantasma"))
+
+    /** Um cérebro por agente, escolhido pelas instruções do pedido. */
+    private class PerAgent(private val scripts: Map<String, ArrayDeque<LlmDecision>>) : LlmProvider {
+        override val id = "roteiro"
+        val requests = mutableListOf<LlmRequest>()
+
+        override suspend fun chooseTools(request: LlmRequest): LlmDecision {
+            requests += request
+            return scripts[request.instructions]?.removeFirstOrNull() ?: LlmDecision(emptyList(), 0.0)
+        }
+    }
+
+    private fun call(tool: String, vararg args: Pair<String, String>) = LlmDecision(listOf(ToolCall(tool, mapOf(*args))), 0.9)
+    private fun answer(text: String) = LlmDecision(emptyList(), 0.9, text)
+
+    private fun runner(brain: LlmProvider) = AgentRunner(listOf(brain), assistant, directory = { listOf(manha, avisos, chefe) })
+
+    @Test
+    fun `o lider pede a um membro e recebe a resposta dele`() = runTest {
+        val brain = PerAgent(
+            mapOf(
+                "Divida." to ArrayDeque(listOf(call("agente_manha", "pedido" to "alarme às 6"), answer("Manha pôs o alarme."))),
+                "Alarmes." to ArrayDeque(listOf(call("alarme", "hora" to "6"), answer("Alarme às 6 pronto."))),
+            ),
+        )
+        val events = mutableListOf<AgentEvent>()
+        val result = runner(brain).start("organiza meu dia", chefe, ctx()) { events += it }
+
+        assertEquals(Outcome.Answer("Manha pôs o alarme."), result.outcome)
+        assertEquals(DeviceAction.SetAlarm(6, 0), actions.single())
+        // O líder vê os membros como ferramentas; o membro, só as dele.
+        val leadTools = brain.requests.first().tools.map { it.name }
+        assertTrue("agente_manha" in leadTools && "agente_avisos" in leadTools && "navegar" in leadTools, "$leadTools")
+        assertFalse(leadTools.any { "fantasma" in it })
+        assertEquals(listOf("alarme", "timer"), brain.requests[1].tools.map { it.name }.sorted())
+        // A resposta do membro volta embrulhada como dado.
+        assertTrue(result.steps.single().result.startsWith("<<<DADO_NAO_CONFIAVEL origem=agente:manha"), result.steps.single().result)
+        assertEquals(
+            listOf("Asked:organizador>manha", "Acted:manha", "Said:manha", "Said:organizador"),
+            events.filter { it !is AgentEvent.Routed }.map {
+                when (it) {
+                    is AgentEvent.Asked -> "Asked:${it.agent}>${it.to}"
+                    else -> "${it::class.simpleName}:${it.agent}"
+                }
+            },
+        )
+    }
+
+    @Test
+    fun `membro parado no Confirmar para a equipe e continua depois do toque`() = runTest {
+        val brain = PerAgent(
+            mapOf(
+                "Divida." to ArrayDeque(listOf(call("agente_avisos", "pedido" to "avisa o João que atraso"), answer("Avisos mandou."))),
+                "Mensagens." to ArrayDeque(listOf(call("whatsapp_preparar", "contato" to "João", "texto" to "atraso"), answer("Mandei para o João."))),
+            ),
+        )
+        val r = runner(brain)
+        val paused = r.start("organiza", chefe, ctx())
+        val confirm = assertIs<Outcome.Confirm>(paused.outcome)
+        assertNotNull(paused.paused?.delegation)
+        assertTrue(actions.isEmpty())
+
+        val done = r.resume(paused.paused!!, confirm.call, ctx(), confirmed = true)
+        assertEquals(Outcome.Answer("Avisos mandou."), done.outcome)
+        assertEquals(DeviceAction.SendWhatsApp("5511987654321", "atraso"), actions.single())
+        assertTrue("Mandei para o João." in done.steps.single().result)
+    }
+
+    @Test
+    fun `membro nao delega e falha volta ao lider`() = runTest {
+        val sub = chefe.copy(name = "sub", instructions = "Sub.", team = listOf("manha"))
+        val lead = AgentProfile("lead", "Lead.", team = listOf("sub"))
+        val brain = PerAgent(
+            mapOf(
+                "Lead." to ArrayDeque(listOf(call("agente_sub", "pedido" to "faz"), answer("O sub não conseguiu."))),
+                "Sub." to ArrayDeque(listOf(call("agente_manha", "pedido" to "alarme"))),
+            ),
+        )
+        val result = AgentRunner(listOf(brain), assistant, directory = { listOf(manha, sub, lead) }).start("x", lead, ctx())
+        assertEquals(Outcome.Answer("O sub não conseguiu."), result.outcome)
+        assertFalse(brain.requests[1].tools.any { it.name.startsWith("agente_") }, "membro não vê a equipe dele")
+        assertTrue("Não conseguiu" in result.steps.single().result)
+        assertTrue(actions.isEmpty())
+    }
+
+    @Test
+    fun `agente nao entra na propria equipe`() {
+        assertFailsWith<IllegalArgumentException> { AgentProfile("a", "", team = listOf("a")) }
+    }
+}

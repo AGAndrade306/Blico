@@ -15,11 +15,18 @@ class AgentStore(context: Context) {
     /** Um arquivo e o agente lido dele, ou o erro que impede de usá-lo. */
     data class Entry(val name: String, val text: String, val agent: AgentProfile?, val error: String?)
 
+    /** Exemplos já criados uma vez. Um exemplo apagado não volta; um exemplo novo aparece na atualização. */
+    private val seeded = File(dir, ".exemplos")
+
     init {
-        if (!dir.exists()) {
-            dir.mkdirs()
-            AgentFile.EXAMPLES.forEach { (name, text) -> File(dir, "$name.md").writeText(text) }
+        dir.mkdirs()
+        val done = if (seeded.exists()) seeded.readLines().toSet() else emptySet()
+        val fresh = AgentFile.EXAMPLES.filter { (name, _) -> name !in done }
+        fresh.forEach { (name, text) ->
+            val f = File(dir, "$name.md")
+            if (!f.exists()) f.writeText(text + "\n")
         }
+        if (fresh.isNotEmpty()) seeded.writeText((done + fresh.map { it.first }).joinToString("\n"))
     }
 
     fun entries(): List<Entry> =
@@ -33,6 +40,11 @@ class AgentStore(context: Context) {
 
     /** Só os agentes que abrem sem erro. */
     fun agents(): List<AgentProfile> = entries().mapNotNull { it.agent }
+
+    /**
+     * Grava um agente montado pelo editor de campos.
+     */
+    fun save(agent: AgentProfile, previousName: String? = null): String? = save(AgentFile.render(agent), previousName)
 
     /**
      * Valida e grava. O arquivo leva o nome do agente; se o nome mudou, o arquivo antigo some.

@@ -109,3 +109,16 @@ André pediu agentes configuráveis no estilo do OpenClaw e do Hermes. O plano c
 - **Como um agente é chamado:** "agente <nome>, ..." (ou "usa o agente <nome>") ou um dos gatilhos dito no pedido, como palavra inteira, sem diferença de acento ou caixa. Sem agente, o pedido segue o caminho de sempre (regras, Gemma, nuvem).
 - **Dois agentes de exemplo criados na primeira vez** (`manha` com alarme e timer, `avisos` com WhatsApp), para servir de modelo. Podem ser editados ou apagados na tela.
 - **Tela de Agentes** em Personalizar: lista, edição do arquivo inteiro com validação ao salvar, novo agente a partir de um modelo e um teste digitado que mostra cada passo e o cartão Confirmar.
+
+## 2026-10-17 — Equipes de agentes e tela própria
+
+André pediu uma tela só para os agentes, com agentes que conversam entre si e fazem tarefas juntos.
+
+- **Equipe é um campo do agente (`equipe: [manha, avisos]`), não um conceito à parte.** Qualquer agente com equipe vira líder: cada membro aparece para ele como uma ferramenta `agente_<nome>` com um parâmetro `pedido`. O membro roda o próprio laço, só com as ferramentas dele, e a resposta volta ao líder como dado não confiável. Assim um agente nunca ganha as ferramentas do outro.
+- **Um nível só.** Membros não chamam a equipe deles: evita ciclos e cadeias longas, que custam passos e chamadas à nuvem.
+- **O Confirmar continua valendo dentro da equipe.** Se um membro para no cartão, a equipe inteira para (`AgentRun.delegation`) e continua do mesmo ponto depois do toque.
+- **Falha de membro não encerra a equipe:** o líder recebe "não conseguiu" e decide o próximo passo. Falha do próprio líder encerra, como antes.
+- **`AgentEvent`** descreve a conversa (quem pediu a quem, ferramentas usadas, respostas, espera pelo toque, uso da nuvem) para a tela mostrar como um grupo. O aviso de cérebro só aparece quando o passo foi para a nuvem.
+- **Tela própria em `app/agents/`** (`AgentsScreen`, pronta para virar aba): equipes no topo, lista de agentes, editor por campos (nome, o que faz, gatilhos, ferramentas, equipe, passos, instruções) com a opção de editar o arquivo inteiro, e uma conversa em balões com o cartão Confirmar no meio. Enquanto não há abas, abre por `AgentsActivity`, a partir de um cartão na tela inicial. A casca de navegação e o `Theme.kt` ficam com o redesenho visual.
+- **Exemplos novos aparecem em atualizações** (`files/agentes/.exemplos` guarda os já criados), e um exemplo apagado não volta. Entrou o `organizador`, líder de `manha` e `avisos`.
+- **O Worker aceita no histórico ferramentas fora do catálogo** (como `whatsapp_enviar`) com uma descrição mínima, para cada `tool_use` ter a sua definição; elas não podem ser chamadas.

@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
             DirectActionsCard(application as BlicoApp, tick)
             LocalModelCard(application as BlicoApp)
             Cloud()
-            AgentsCard(application as BlicoApp)
+            app.blico.agents.AgentsEntryCard(application as BlicoApp)
 
             Section("Testar")
             CommandTest()

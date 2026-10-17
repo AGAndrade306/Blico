@@ -104,7 +104,7 @@ class BlicoApp : Application() {
 
     /** Agentes em arquivo. Rodam só com os modelos: as regras repetiriam o mesmo pedido a cada passo. */
     val agents by lazy { AgentStore(this) }
-    val agentRunner by lazy { AgentRunner(brains, assistant) }
+    val agentRunner by lazy { AgentRunner(brains, assistant, directory = { agents.agents() }) }
 
     /** Carrega o modelo local enquanto a pessoa fala, para a resposta não esperar por isso. */
     fun warmUpLocal() {

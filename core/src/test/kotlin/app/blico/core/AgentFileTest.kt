@@ -97,3 +97,22 @@ class AgentFileTest {
         assertNull(AgentFile.match("avisa todo mundox", agents))
     }
 }
+
+class AgentFileRenderTest {
+    @Test
+    fun `render e parse ida e volta`() {
+        val a = AgentProfile(
+            "organizador", "Divida.\nResponda curto.", tools = setOf("timer", "alarme"), maxSteps = 6,
+            description = "Coordena", triggers = listOf("organiza meu dia"), team = listOf("manha", "avisos"),
+        )
+        assertEquals(a, AgentFile.parse(AgentFile.render(a)))
+    }
+
+    @Test
+    fun `membros que nao existem viram aviso`() {
+        val all = AgentFile.EXAMPLES.map { AgentFile.parse(it.second) }
+        val org = all.single { it.name == "organizador" }
+        assertEquals(emptyList(), AgentFile.unknownMembers(org, all))
+        assertEquals(listOf("x"), AgentFile.unknownMembers(org.copy(team = listOf("manha", "x")), all))
+    }
+}

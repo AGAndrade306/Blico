@@ -13,13 +13,14 @@ import java.text.Normalizer
  * gatilhos: [bom dia, prepara a manhã]
  * ferramentas: [alarme, timer]
  * max_passos: 4
+ * equipe: [avisos]
  * ---
  * Ponha o alarme e o timer que eu pedir e diga em uma frase o que ficou pronto.
  * ```
  */
 object AgentFile {
     private val NAME = Regex("[a-z0-9_-]{1,40}")
-    private val KEYS = setOf("nome", "descricao", "gatilhos", "ferramentas", "max_passos")
+    private val KEYS = setOf("nome", "descricao", "gatilhos", "ferramentas", "max_passos", "equipe")
 
     /** Lê um arquivo. Erros viram [IllegalArgumentException] com a frase que a tela mostra. */
     fun parse(text: String): AgentProfile {
@@ -49,6 +50,7 @@ object AgentFile {
             maxSteps = maxSteps ?: AgentProfile.DEFAULT_MAX_STEPS,
             description = fields["descricao"].orEmpty(),
             triggers = list(fields["gatilhos"]),
+            team = list(fields["equipe"]),
         )
     }
 
@@ -58,6 +60,22 @@ object AgentFile {
             .split(',')
             .map { it.trim().trim('"', '\'').trim() }
             .filter { it.isNotEmpty() }
+
+    /** O texto do arquivo para um agente, no mesmo formato que [parse] lê. Usado pelo editor de campos. */
+    fun render(agent: AgentProfile): String = buildString {
+        append("---\n")
+        append("nome: ").append(agent.name).append('\n')
+        if (agent.description.isNotBlank()) append("descricao: ").append(agent.description.trim()).append('\n')
+        if (agent.triggers.isNotEmpty()) append("gatilhos: ").append(agent.triggers.joinToString(", ", "[", "]")).append('\n')
+        if (agent.tools.isNotEmpty()) append("ferramentas: ").append(agent.tools.sorted().joinToString(", ", "[", "]")).append('\n')
+        if (agent.team.isNotEmpty()) append("equipe: ").append(agent.team.joinToString(", ", "[", "]")).append('\n')
+        append("max_passos: ").append(agent.maxSteps).append('\n')
+        append("---\n")
+        append(agent.instructions.trim()).append('\n')
+    }
+
+    /** Membros da equipe que não existem entre os agentes. */
+    fun unknownMembers(agent: AgentProfile, all: List<AgentProfile>): List<String> = agent.team.filter { m -> all.none { it.name == m } }
 
     /** Ferramentas que o agente lista e que não existem no catálogo. */
     fun unknownTools(agent: AgentProfile, registry: ToolRegistry): List<String> = agent.tools.filter { registry[it] == null }.sorted()
@@ -107,6 +125,19 @@ object AgentFile {
             ---
             Ponha os alarmes e timers que eu pedir, um de cada vez.
             Se eu não disser a hora, use 7h. No fim, diga em uma frase o que ficou pronto.
+        """.trimIndent(),
+        "organizador" to """
+            ---
+            nome: organizador
+            descricao: Coordena a manhã e os avisos, pedindo a cada agente a sua parte
+            gatilhos: [organiza meu dia]
+            ferramentas: [navegar]
+            equipe: [manha, avisos]
+            max_passos: 6
+            ---
+            Divida o pedido em partes e peça cada parte ao agente certo da equipe:
+            alarmes e timers para manha, mensagens para avisos.
+            No fim, diga em uma frase o que cada um fez.
         """.trimIndent(),
         "avisos" to """
             ---
