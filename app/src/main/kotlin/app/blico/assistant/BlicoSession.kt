@@ -121,6 +121,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
             val out = step(app.assistant, app.execContext { context.startActivity(it) })
             thinking = false
             outcome = out
+            app.record(out)
             app.say(out.spoken)
             // Ação feita: o app alvo já está abrindo por trás, então o cartão sai da frente.
             if (out is Outcome.Done) finish()

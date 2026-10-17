@@ -18,17 +18,10 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import app.blico.ui.LocalBlico
 import app.blico.ui.BlicoButton
 import app.blico.ui.BlicoCard
@@ -36,17 +29,14 @@ import app.blico.ui.BlicoChip
 import app.blico.ui.BlicoMark
 import app.blico.ui.BlicoTheme
 import app.blico.ui.BlicoProgress
-import app.blico.ui.CardShape
-import app.blico.ui.LargeTitle
-import app.blico.ui.screen
+import app.blico.ui.ScreenHeader
+import app.blico.ui.SectionLabel
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
@@ -58,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -71,28 +62,69 @@ import app.blico.voice.OnDeviceTranscriber
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-/** Tela de configuração: permissões, assistente padrão e um teste de escuta. */
+/** O app: Início (o assistente), Agentes e Ajustes (permissões, vozes, cérebro e testes). */
 class MainActivity : ComponentActivity() {
     private var resumeTick by mutableIntStateOf(0)
+    private var inFront by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Papel sempre claro: ícones escuros nas barras do sistema, mesmo no modo escuro.
-        val clara = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
-        enableEdgeToEdge(statusBarStyle = clara, navigationBarStyle = clara)
+        // Barras transparentes; os ícones seguem o tema claro ou escuro do sistema.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         setContent {
-            BlicoTheme(dark = false) {
-                Box(Modifier.fillMaxSize().screen()) {
-                    SetupScreen(resumeTick)
+            BlicoTheme {
+                var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+                val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { resumeTick++ }
+                Shell(tab, onTab = { tab = it }) { current ->
+                    when (current) {
+                        Tab.HOME -> {
+                            val steps = setupSteps(resumeTick)
+                            HomeScreen(
+                                app = application as BlicoApp,
+                                tick = resumeTick,
+                                visible = inFront,
+                                pendingSteps = steps.count { !it },
+                                micGranted = steps.first(),
+                                onAskMic = { askMic.launch(Manifest.permission.RECORD_AUDIO) },
+                                onOpenSettings = { tab = Tab.SETTINGS },
+                                launch = { startActivity(it) },
+                            )
+                        }
+                        Tab.AGENTS -> AgentsTab(application as BlicoApp)
+                        Tab.SETTINGS -> SetupScreen(resumeTick)
+                    }
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        inFront = true
+    }
+
+    override fun onStop() {
+        inFront = false // fecha o microfone da tela inicial
+        super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
         resumeTick++ // Rechecar permissões e papel ao voltar das Configurações.
     }
+
+    /** Microfone, reconhecimento, assistente padrão, contatos e arquivos; o microfone vem primeiro. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun setupSteps(tick: Int): List<Boolean> = listOf(
+        checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED,
+        OnDeviceTranscriber(this).isAvailable(),
+        getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_ASSISTANT),
+        checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED,
+        Environment.isExternalStorageManager(),
+    )
 
     // [tick] muda a cada onResume; a recomposição relê permissões e papel, que não são observáveis.
     @Suppress("UNUSED_PARAMETER")
@@ -117,11 +149,11 @@ class MainActivity : ComponentActivity() {
 
         Column(
             Modifier
-                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
         ) {
-            val steps = listOf(micGranted, onDevice, isAssistant, contactsGranted, Environment.isExternalStorageManager())
+            val steps = setupSteps(tick)
             Header(ready = steps.count { it }, total = steps.size)
             Section("Preparar")
 
@@ -193,29 +225,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Logo, título grande e quantos passos já estão prontos. */
+    /** Nome da aba e quantos passos já estão prontos. */
     @Composable
     private fun Header(ready: Int, total: Int) {
         val p = LocalBlico.current
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)) {
-            Image(
-                painter = painterResource(R.drawable.blico_logo),
-                contentDescription = null,
-                modifier = Modifier.size(56.dp).clip(CardShape).background(p.card),
-            )
-            Spacer(Modifier.width(14.dp))
-            Column {
-                LargeTitle("Blico")
-                Text("Seu assistente, no seu celular", style = MaterialTheme.typography.bodyMedium, color = p.muted)
-            }
-        }
-        Spacer(Modifier.height(16.dp))
         val all = ready == total
+        ScreenHeader("Ajustes", if (all) "Tudo pronto" else "$ready de $total passos prontos")
         BlicoCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (all) "Tudo pronto. Segure o botão lateral e fale." else "$ready de $total passos prontos",
-                    style = MaterialTheme.typography.bodyLarge,
+                    if (all) "Segure o botão lateral e fale." else "Termine os passos abaixo para usar o botão lateral.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = p.text,
                     modifier = Modifier.weight(1f),
                 )
                 BlicoMark(all)
@@ -224,12 +245,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Título de seção, como nas listas agrupadas do iOS. */
     @Composable
-    private fun Section(title: String) {
-        Spacer(Modifier.height(28.dp))
-        Text(title, style = MaterialTheme.typography.titleLarge, color = LocalBlico.current.text, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
-    }
+    private fun Section(title: String) = SectionLabel(title)
 
     /** Passo de configuração. Pronto, ele encolhe para uma linha; pendente, mostra o porquê e o botão. */
     @Composable
@@ -354,6 +371,7 @@ class MainActivity : ComponentActivity() {
                         val out = app.assistant.handle(text, app.execContext { startActivity(it) }) { via = it }
                         route = via?.let { "Entendido por: ${ROUTES[it] ?: it}, em %.1f s".format(java.util.Locale.forLanguageTag("pt-BR"), (System.currentTimeMillis() - start) / 1000.0) }
                         result = out
+                        app.record(out)
                         app.say(out.spoken)
                     }
                 })
@@ -364,6 +382,7 @@ class MainActivity : ComponentActivity() {
                         scope.launch {
                             val out = app.assistant.execute(call, app.execContext { startActivity(it) })
                             result = out
+                            app.record(out)
                             app.say(out.spoken)
                         }
                     }
@@ -374,6 +393,7 @@ class MainActivity : ComponentActivity() {
                         scope.launch {
                             val out = app.assistant.execute(confirm.call, app.execContext { startActivity(it) }, confirmed = true)
                             result = out
+                            app.record(out)
                             app.say(out.spoken)
                         }
                     })
