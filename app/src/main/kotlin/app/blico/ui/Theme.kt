@@ -356,10 +356,13 @@ private val AvatarColors = listOf(
     Color(0xFF0F8C8C), Color(0xFFB8355A), Color(0xFF6B6B64),
 )
 
+/** A cor do avatar de [name], a mesma em todo lugar; serve também para o nome escrito ao lado. */
+fun avatarColor(name: String): Color = AvatarColors[Math.floorMod(name.trim().lowercase().hashCode(), AvatarColors.size)]
+
 /** Avatar redondo com a inicial em pontos. Sem [color], a cor sai do nome, sempre a mesma para ele. */
 @Composable
 fun BlicoAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 36.dp, color: Color? = null) {
-    val bg = color ?: AvatarColors[Math.floorMod(name.trim().lowercase().hashCode(), AvatarColors.size)]
+    val bg = color ?: avatarColor(name)
     val initial = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(modifier.size(size).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
         Text(

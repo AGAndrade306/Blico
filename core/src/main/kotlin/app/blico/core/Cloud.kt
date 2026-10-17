@@ -14,8 +14,18 @@ object CloudProtocol {
     @Serializable
     data class ToolSpec(val name: String, val description: String, val parameters: Parameters)
 
+    /** Um passo já dado: a chamada e o que ela devolveu (já embrulhado como dado não confiável). */
     @Serializable
-    data class Request(val text: String, val tools: List<ToolSpec>, val context: List<String> = emptyList())
+    data class Step(val tool: String, val args: Map<String, String> = emptyMap(), val result: String)
+
+    @Serializable
+    data class Request(
+        val text: String,
+        val tools: List<ToolSpec>,
+        val context: List<String> = emptyList(),
+        val instructions: String? = null,
+        val history: List<Step> = emptyList(),
+    )
 
     @Serializable
     data class Call(val tool: String, val args: Map<String, String> = emptyMap())
@@ -40,6 +50,8 @@ object CloudProtocol {
                 )
             },
             context = request.context,
+            instructions = request.instructions,
+            history = request.history.map { Step(it.call.tool, it.call.args, it.result) },
         ),
     )
 
@@ -75,10 +87,31 @@ class RedactingProvider(
 
     override suspend fun chooseTools(request: LlmRequest): LlmDecision {
         val redactor = Redactor(knownEntities())
-        val masked = redactor.redact(request.text)
-        val maskedContext = request.context.map { redactor.redact(it) }
-        val mapping = masked.mapping + maskedContext.flatMap { it.mapping.entries }.associate { it.key to it.value }
-        val decision = inner.chooseTools(request.copy(text = masked.text, context = maskedContext.map { it.text }))
+        // Tudo numa passada só, para o mesmo dado ter o mesmo apelido no pedido, no contexto e nos passos.
+        val history = request.history
+        val pieces = buildList {
+            add(request.text)
+            addAll(request.context)
+            add(request.instructions.orEmpty())
+            history.forEach { step ->
+                add(step.result)
+                step.call.args.toSortedMap().values.forEach(::add)
+            }
+        }
+        val all = redactor.redactAll(pieces)
+        val masked = all.texts.iterator()
+        val text = masked.next()
+        val context = request.context.map { masked.next() }
+        val instructions = masked.next().takeIf { request.instructions != null }
+        val maskedHistory = history.map { step ->
+            val result = masked.next()
+            val args = step.call.args.toSortedMap().mapValues { masked.next() }
+            AgentStep(step.call.copy(args = args), result)
+        }
+        val mapping = all.mapping
+        val decision = inner.chooseTools(
+            request.copy(text = text, context = context, instructions = instructions, history = maskedHistory),
+        )
         return decision.copy(
             calls = decision.calls.map { c -> c.copy(args = c.args.mapValues { redactor.restore(it.value, mapping) }) },
             answer = decision.answer?.let { redactor.restore(it, mapping) },

@@ -16,6 +16,9 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import app.blico.BlicoApp
 import app.blico.MainActivity
+import app.blico.core.AgentFile
+import app.blico.core.AgentResult
+import app.blico.core.AgentRun
 import app.blico.core.Assistant
 import app.blico.core.ExecContext
 import app.blico.core.Outcome
@@ -46,6 +49,9 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
     private var outcome by mutableStateOf<Outcome?>(null)
     private var thinking by mutableStateOf(false)
 
+    /** Agente parado no cartão, esperando o Confirmar ou uma escolha. */
+    private var pending: AgentRun? = null
+
     override fun onCreate() {
         super.onCreate()
         scope = MainScope()
@@ -62,8 +68,8 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
                 thinking = thinking,
                 outcome = outcome,
                 onRetry = ::startListening,
-                onChoose = { call -> act { assistant, ctx -> assistant.execute(call, ctx) } },
-                onConfirm = { call -> act { assistant, ctx -> assistant.execute(call, ctx, confirmed = true) } },
+                onChoose = { call -> resumeOr(call, confirmed = false) },
+                onConfirm = { call -> resumeOr(call, confirmed = true) },
                 onOpenSetup = ::openSetup,
                 onClose = ::finish,
             )
@@ -97,6 +103,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
         app.speech.stop() // o gesto interrompe a fala, e o microfone não ouve o próprio Blico
         state = ListeningState()
         outcome = null
+        pending = null
         needsPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
         if (needsPermission) return
@@ -108,7 +115,12 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
                 }
                 state = state.reduce(event)
                 if (event is TranscriptionEvent.Final) {
-                    act { assistant, ctx -> assistant.handle(event.text, ctx) }
+                    val agent = AgentFile.match(event.text, app.agents.agents())
+                    if (agent != null) {
+                        actAgent { ctx -> app.agentRunner.start(agent.second, agent.first, ctx) }
+                    } else {
+                        act { assistant, ctx -> assistant.handle(event.text, ctx) }
+                    }
                 }
             }
         }
@@ -125,6 +137,29 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
             app.say(out.spoken)
             // Ação feita: o app alvo já está abrindo por trás, então o cartão sai da frente.
             if (out is Outcome.Done) finish()
+        }
+    }
+
+    /** Toque no cartão: um agente parado continua de onde estava; sem agente, é um passo só. */
+    private fun resumeOr(call: ToolCall, confirmed: Boolean) {
+        val run = pending
+        if (run != null) {
+            actAgent { ctx -> app.agentRunner.resume(run, call, ctx, confirmed) }
+        } else {
+            act { assistant, ctx -> assistant.execute(call, ctx, confirmed) }
+        }
+    }
+
+    /** Roda o agente até a resposta ou até o próximo cartão. */
+    private fun actAgent(step: suspend (ExecContext) -> AgentResult) {
+        scope.launch {
+            thinking = true
+            pending = null
+            val result = step(app.execContext { context.startActivity(it) })
+            thinking = false
+            pending = result.paused
+            outcome = result.outcome
+            app.say(result.outcome.spoken)
         }
     }
 

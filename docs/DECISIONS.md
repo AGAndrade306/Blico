@@ -89,10 +89,53 @@ André pediu para não ter que tocar em "enviar" no WhatsApp nem no botão de li
 - **Ligado por padrão quando a pessoa libera** (permissão ou acessibilidade), com a opção "Só deixar pronto" no cartão da tela inicial.
 - **No Android 13+ um APK instalado fora da loja precisa de "Permitir configurações restritas"** antes de ligar a acessibilidade; a tela explica o caminho.
 
+## 2026-10-15 — Agentes: laço próprio no `core`, sem framework
+
+André pediu agentes configuráveis no estilo do OpenClaw e do Hermes. O plano completo está em `plano/agentes.md` (pasta do projeto).
+
+- **Sem LangChain, CrewAI, OpenClaw ou Hermes no app.** São Python ou Node, pensados para um computador, e o OpenClaw e o Hermes recebem ordens por apps de mensagem (regra 6). Deles vêm só os formatos: agentes e skills em Markdown e memória em arquivos. O Koog (JetBrains, Kotlin, roda no Android) fica como plano B se o laço próprio crescer demais; não entrou agora porque traria o próprio formato de ferramenta e teríamos de reencaixar a política de risco, o cartão e o mascaramento.
+- **`AgentRunner` no `core`**: pede o próximo passo ao cérebro, executa pelo `Assistant.execute` (mesma `RiskPolicy`), devolve o resultado e repete até uma resposta, uma falha ou o limite de passos (padrão 5, teto 10). Um passo de cada vez. Classe 2 e escolhas pausam o laço (`AgentResult.paused`) e ele só continua com `resume` depois do toque; recusar o cartão encerra o agente.
+- **Só modelos no laço, sem as regras**: as regras entenderiam o mesmo pedido de novo a cada passo.
+- **O agente só usa as ferramentas que lista.** Fora delas, a chamada é recusada. As que só nascem de outra pelo cartão (whatsapp_enviar, ligar_agora) entram porque vêm do toque em Confirmar.
+- **Falha encerra o agente**, sem replanejar sozinho: a pessoa vê o erro e decide. O mesmo passo duas vezes seguidas também encerra (modelo andando em círculo).
+- **Resultados de ferramenta voltam ao cérebro como dado não confiável** (`UntrustedContent.wrap`), porque podem trazer nomes de arquivo, contatos ou texto lido do aparelho.
+- **O servidor continua sem estado.** A cada passo o app manda o pedido, as instruções do agente e o histórico curto; o Worker monta os passos como `tool_use`/`tool_result` e as instruções vão no `system`. O modelo local recebe o mesmo histórico em texto (`LocalBrain.userMessage`).
+- **Mascaramento numa passada só** (`Redactor.redactAll`): pedido, contexto, instruções e passos usam os mesmos apelidos, para o `telefone_1` do histórico ser o mesmo do pedido. Isso também corrige a colisão de apelidos que existia entre o pedido e o contexto.
+
+## 2026-10-15 — Agentes em arquivos Markdown
+
+- **Um arquivo por agente em `files/agentes/` (pasta privada do app)**, com cabeçalho curto (`nome`, `descricao`, `gatilhos`, `ferramentas`, `max_passos`) e as instruções em texto livre abaixo, no estilo das skills do OpenClaw e do Hermes. O formato é lido no `core` (`AgentFile`) e testado sem aparelho. Campo desconhecido é erro, para um erro de digitação não virar silêncio.
+- **Sem cifra por enquanto.** Os arquivos ficam na área privada do app, que só o Blico lê; a cifra entra junto com a memória em arquivos, para as duas usarem o mesmo esquema.
+- **Como um agente é chamado:** "agente <nome>, ..." (ou "usa o agente <nome>") ou um dos gatilhos dito no pedido, como palavra inteira, sem diferença de acento ou caixa. Sem agente, o pedido segue o caminho de sempre (regras, Gemma, nuvem).
+- **Dois agentes de exemplo criados na primeira vez** (`manha` com alarme e timer, `avisos` com WhatsApp), para servir de modelo. Podem ser editados ou apagados na tela.
+- **Tela de Agentes** em Personalizar: lista, edição do arquivo inteiro com validação ao salvar, novo agente a partir de um modelo e um teste digitado que mostra cada passo e o cartão Confirmar.
+
+## 2026-10-17 — Equipes de agentes e tela própria
+
+André pediu uma tela só para os agentes, com agentes que conversam entre si e fazem tarefas juntos.
+
+- **Equipe é um campo do agente (`equipe: [manha, avisos]`), não um conceito à parte.** Qualquer agente com equipe vira líder: cada membro aparece para ele como uma ferramenta `agente_<nome>` com um parâmetro `pedido`. O membro roda o próprio laço, só com as ferramentas dele, e a resposta volta ao líder como dado não confiável. Assim um agente nunca ganha as ferramentas do outro.
+- **Um nível só.** Membros não chamam a equipe deles: evita ciclos e cadeias longas, que custam passos e chamadas à nuvem.
+- **O Confirmar continua valendo dentro da equipe.** Se um membro para no cartão, a equipe inteira para (`AgentRun.delegation`) e continua do mesmo ponto depois do toque.
+- **Falha de membro não encerra a equipe:** o líder recebe "não conseguiu" e decide o próximo passo. Falha do próprio líder encerra, como antes.
+- **`AgentEvent`** descreve a conversa (quem pediu a quem, ferramentas usadas, respostas, espera pelo toque, uso da nuvem) para a tela mostrar como um grupo. O aviso de cérebro só aparece quando o passo foi para a nuvem.
+- **Tela própria em `app/agents/`** (`AgentsScreen`, pronta para virar aba): equipes no topo, lista de agentes, editor por campos (nome, o que faz, gatilhos, ferramentas, equipe, passos, instruções) com a opção de editar o arquivo inteiro, e uma conversa em balões com o cartão Confirmar no meio. Enquanto não há abas, abre por `AgentsActivity`, a partir de um cartão na tela inicial. A casca de navegação e o `Theme.kt` ficam com o redesenho visual.
+- **Exemplos novos aparecem em atualizações** (`files/agentes/.exemplos` guarda os já criados), e um exemplo apagado não volta. Entrou o `organizador`, líder de `manha` e `avisos`.
+- **O Worker aceita no histórico ferramentas fora do catálogo** (como `whatsapp_enviar`) com uma descrição mínima, para cada `tool_use` ter a sua definição; elas não podem ser chamadas.
+
 ## 2026-10-15 — Busca no DuckDuckGo e benchmark visível
 
 - **Pesquisas vão para o DuckDuckGo**, por privacidade: ele não monta perfil de quem pesquisa. Abre no app do DuckDuckGo se estiver instalado; senão, no navegador padrão. Antes, a busca ia para o app de busca do sistema (o Google).
 - **O benchmark roda no escopo do app, não da tela** (`BenchmarkRunner`). Com o Gemma, 100 pedidos levam minutos; antes, sair da tela cancelava sem mostrar nada. Agora os resultados aparecem um a um (✓ ou ✗, o que veio e o tempo), e o resumo e os erros do último benchmark completo ficam guardados.
+
+## 2026-10-17 — Conversa em grupo com os agentes
+
+Inspirada no Grok Bot da xAI, que o André mostrou: vários agentes na mesma conversa, passando trabalho entre si.
+
+- **@nome escolhe quem fala** (`Mentions.split`): "@manha alarme às 6 @avisos avisa o João" vira um pedido para cada um, na ordem. Sem @, vai para o agente escolhido embaixo da conversa. Acento e caixa não importam.
+- **Um agente passa a vez citando @outro na resposta** (`GroupRunner`), até 3 vezes por mensagem sua, para dois agentes não conversarem sem fim gastando a nuvem.
+- **Cada agente vê as últimas 12 falas como dado não confiável** (`UntrustedContent`, origem `conversa`) e age só com as próprias ferramentas. O que um agente pede a outro pode vir de algo que ele leu; por isso o envio e a ligação continuam presos ao Confirmar, que para o grupo inteiro e continua do mesmo ponto.
+- **Do Grok Bot ficam de fora**, por privacidade (regras 5 e 6): o computador na nuvem ligado 24 horas, o login dos agentes nos seus sites e o aprendizado vendo a sua tela. Rotinas agendadas e papéis prontos entram depois, cada um no seu PR.
 
 ## 2026-10-17 — Vozes neurais no celular
 
@@ -104,6 +147,18 @@ A voz do sistema soava robótica.
 - **Pacotes baixados pelo DownloadManager**, com os dados móveis liberados (são bem menores que o Gemma), e abertos no celular só com o que o português usa. A extração recusa caminhos que saem da pasta da voz, no `core` (testado) e de novo no caminho resolvido pelo sistema.
 - **A voz do sistema continua como reserva**: sem voz neural baixada e escolhida, o Blico fala com o motor do Android, como antes.
 - **APK só com arm64-v8a.** O sherpa-onnx traz 120 MB de bibliotecas nativas para quatro arquiteturas; o S25 Ultra usa uma só.
+
+## 2026-10-17 — Login nos serviços: Google primeiro, pelo Play Services
+
+O André quer que os agentes entrem nas contas dele. A escolha foi o Google (Agenda e Gmail) primeiro.
+
+- **O login é o do próprio Android** (`AuthorizationClient` do Play Services, em `GoogleLogin`). A pessoa escolhe a conta e aceita os acessos numa tela do Google; o Blico recebe só um acesso de uma hora, que fica na memória e é renovado em silêncio. Não há senha, segredo de cliente nem ID no código: o Google reconhece o app pelo pacote `app.blico` e pela assinatura.
+- **Assinatura fixa no CI**, vinda dos segredos do repositório (`BLICO_KEYSTORE_*`). Antes, cada build saía com uma chave de debug nova, e o Google recusaria o login. Sem os segredos, o build continua com a chave de debug padrão.
+- **O Blico fala direto com o Google**, sem passar pelo servidor próprio, que segue sem guardar nada de ninguém. O que vem da Agenda e do Gmail é dado não confiável no laço dos agentes e passa pelo `Redactor` antes de ir para a nuvem (regras 3 e 5). Enviar o e-mail ou criar o evento na conta da pessoa é a própria ação pedida, e por isso passa pelo Confirmar em vez do mascaramento.
+- **Classes de risco:** ver agenda e ler e-mails são leitura (0); rascunho no Gmail é preparar (1); criar evento e enviar e-mail são compromisso (2) e param no Confirmar, com o texto montado da chamada.
+- **Ferramentas próprias sobre a API REST do Google, e não um servidor MCP**: a API é estável e documentada, e o celular fala com ela direto, sem precisar de outro servidor no meio. Sem login, as ferramentas nem aparecem aos modelos.
+- **Cliente MCP próprio e mínimo no `core`** (`McpClient`, `McpTool`) para os próximos serviços, como o Notion: initialize, tools/list e tools/call por Streamable HTTP, além do OAuth com PKCE (`OAuth`). Ficou no lugar do `kotlin-sdk` porque o `core` não depende de Ktor e esse subconjunto é pequeno e testável com fakes. Uma ferramenta de servidor MCP só executa direto se o servidor a marcar como leitura (`readOnlyHint`); o resto para no Confirmar. A descrição vinda do servidor é cortada e limpa, porque pode tentar dar ordens ao modelo.
+- **Novo exemplo `secretaria`**, que só usa as ferramentas do Google e prefere deixar rascunho a enviar.
 
 ## 2026-10-17 — Visual "Painel" e abas
 

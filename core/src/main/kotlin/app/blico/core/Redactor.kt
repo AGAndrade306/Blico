@@ -11,8 +11,20 @@ class Redactor(private val known: Map<String, String> = emptyMap()) {
     data class Redacted(val text: String, val mapping: Map<String, String>)
 
     fun redact(text: String): Redacted {
+        val all = redactAll(listOf(text))
+        return Redacted(all.texts.single(), all.mapping)
+    }
+
+    /** Vários textos com os mesmos apelidos: o mesmo telefone vira o mesmo telefone_N em todos. */
+    data class RedactedAll(val texts: List<String>, val mapping: Map<String, String>)
+
+    fun redactAll(texts: List<String>): RedactedAll {
         val mapping = linkedMapOf<String, String>()
         val reverse = hashMapOf<String, String>()
+        return RedactedAll(texts.map { redactInto(it, mapping, reverse) }, mapping)
+    }
+
+    private fun redactInto(text: String, mapping: MutableMap<String, String>, reverse: MutableMap<String, String>): String {
         var out = text
 
         // Nomes mais longos primeiro, para "João Silva" não virar "contato_1 Silva".
@@ -26,8 +38,7 @@ class Redactor(private val known: Map<String, String> = emptyMap()) {
         }
 
         out = replaceAll(out, EMAIL, "email", mapping, reverse)
-        out = replaceAll(out, PHONE, "telefone", mapping, reverse)
-        return Redacted(out, mapping)
+        return replaceAll(out, PHONE, "telefone", mapping, reverse)
     }
 
     fun restore(text: String, mapping: Map<String, String>): String {
