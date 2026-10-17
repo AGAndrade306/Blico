@@ -136,3 +136,14 @@ Inspirada no Grok Bot da xAI, que o André mostrou: vários agentes na mesma con
 - **Um agente passa a vez citando @outro na resposta** (`GroupRunner`), até 3 vezes por mensagem sua, para dois agentes não conversarem sem fim gastando a nuvem.
 - **Cada agente vê as últimas 12 falas como dado não confiável** (`UntrustedContent`, origem `conversa`) e age só com as próprias ferramentas. O que um agente pede a outro pode vir de algo que ele leu; por isso o envio e a ligação continuam presos ao Confirmar, que para o grupo inteiro e continua do mesmo ponto.
 - **Do Grok Bot ficam de fora**, por privacidade (regras 5 e 6): o computador na nuvem ligado 24 horas, o login dos agentes nos seus sites e o aprendizado vendo a sua tela. Rotinas agendadas e papéis prontos entram depois, cada um no seu PR.
+
+## 2026-10-17 — Vozes neurais no celular
+
+A voz do sistema soava robótica.
+
+- **sherpa-onnx 1.13.8 como motor** (Apache 2.0): roda Kokoro e Piper no aparelho, sem internet. O AAR oficial não está no Maven Central; o `settings.gradle.kts` baixa da release do GitHub, confere o SHA-256 e serve de um repositório Maven local em `.thirdparty/` (fora do git).
+- **Duas famílias de voz.** Kokoro v1.0 int8 (132 MB, três vozes em português: Dora, Alex e Santa) é a mais natural, mas gera devagar: cerca de 1 s de processamento por segundo de fala num servidor de 4 núcleos. Piper (67 MB por voz) gera em 5% do tempo da fala. Ficaram de fora a Edresson (sem o til nasal no vocabulário, o "ão" sai errado) e as vozes de Portugal.
+- **Fala frase por frase.** O texto é quebrado em frases (`NeuralVoices.chunks`) e a primeira toca enquanto a próxima é gerada, numa thread só do motor. Isso esconde a lentidão do Kokoro em respostas curtas.
+- **Pacotes baixados pelo DownloadManager**, com os dados móveis liberados (são bem menores que o Gemma), e abertos no celular só com o que o português usa. A extração recusa caminhos que saem da pasta da voz, no `core` (testado) e de novo no caminho resolvido pelo sistema.
+- **A voz do sistema continua como reserva**: sem voz neural baixada e escolhida, o Blico fala com o motor do Android, como antes.
+- **APK só com arm64-v8a.** O sherpa-onnx traz 120 MB de bibliotecas nativas para quatro arquiteturas; o S25 Ultra usa uma só.

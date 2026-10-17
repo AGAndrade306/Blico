@@ -178,6 +178,7 @@ class MainActivity : ComponentActivity() {
             }
 
             Section("Personalizar")
+            NeuralVoiceCard(application as BlicoApp)
             VoiceSettings()
             Places()
             DirectActionsCard(application as BlicoApp, tick)
@@ -449,10 +450,10 @@ class MainActivity : ComponentActivity() {
         val app = application as BlicoApp
         val scope = rememberCoroutineScope()
         var prefs by remember { mutableStateOf(app.voicePrefs) }
-        val engines = remember { app.speech.engines() }
-        val currentEngine = prefs.engine ?: app.speech.defaultEngine()
+        val engines = remember { app.systemSpeech.engines() }
+        val currentEngine = prefs.engine ?: app.systemSpeech.defaultEngine()
         var voices by remember { mutableStateOf<List<VoiceOption>?>(null) }
-        LaunchedEffect(currentEngine) { voices = null; voices = app.speech.voices() }
+        LaunchedEffect(currentEngine) { voices = null; voices = app.systemSpeech.voices() }
 
         fun update(p: VoicePrefs) {
             prefs = p
@@ -461,9 +462,9 @@ class MainActivity : ComponentActivity() {
 
         BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Column {
-                Text("Voz", style = MaterialTheme.typography.titleMedium)
+                Text("Voz do sistema", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Escolha o motor e a voz. Só aparecem vozes que funcionam sem internet, para o que o Blico fala não sair do celular.",
+                    "Usada quando nenhuma voz neural está escolhida. Só aparecem vozes que funcionam sem internet, para o que o Blico fala não sair do celular.",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (engines.size > 1) {
@@ -520,7 +521,7 @@ class MainActivity : ComponentActivity() {
                     steps = 5,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BlicoButton("Ouvir", onClick = { scope.launch { app.speech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } })
+                    BlicoButton("Ouvir", onClick = { scope.launch { app.systemSpeech.speak("Oi, eu sou o Blico. Essa é a minha voz.") } })
                     BlicoButton("Instalar mais vozes", onClick = ::openTtsSettings, primary = false)
                 }
             }
