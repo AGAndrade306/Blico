@@ -14,6 +14,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.0.1"
+        // Só o S25 Ultra e celulares parecidos: corta do APK as bibliotecas nativas de 32 bits e de emulador.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildTypes {

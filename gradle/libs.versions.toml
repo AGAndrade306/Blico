@@ -7,6 +7,9 @@ coroutines = "1.10.2"
 junit5 = "5.13.4"
 serialization = "1.9.0"
 litertlm = "0.18.0"
+# Precisa bater com sherpaVersion em settings.gradle.kts.
+sherpa-onnx = "1.13.8"
+commons-compress = "1.27.1"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -16,6 +19,8 @@ compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 litertlm = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
+sherpa-onnx = { group = "com.k2fsa.sherpa.onnx", name = "sherpa-onnx-android", version.ref = "sherpa-onnx" }
+commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons-compress" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
