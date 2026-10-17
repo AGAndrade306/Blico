@@ -37,6 +37,7 @@ import app.blico.ui.BlicoButton
 import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoLink
 import app.blico.ui.BlicoTheme
+import app.blico.ui.PanelLabel
 import app.blico.core.ToolCall
 import app.blico.voice.ListeningState
 import app.blico.voice.ListeningState.Phase
@@ -115,37 +116,7 @@ internal fun AssistantOverlay(
 
                     outcome?.let { out ->
                         Spacer(Modifier.height(12.dp))
-                        Text(
-                            out.spoken,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (out is Outcome.Failed) p.danger else p.text,
-                        )
-                        // Escolha entre contatos: cada botão já leva a chamada completa.
-                        if (out.choices.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                out.choices.forEach { (label, call) ->
-                                    BlicoButton(label, onClick = { onChoose(call) }, primary = false)
-                                }
-                            }
-                        }
-                        // Arquivos encontrados: as ações voltam como chamadas, iguais às de voz.
-                        if (out is Outcome.Files) {
-                            Spacer(Modifier.height(8.dp))
-                            FileResults(out.items, onAction = onChoose)
-                        }
-                        // Classe 2: o texto vem do resumo estruturado, nunca do modelo.
-                        if (out is Outcome.Confirm) {
-                            Spacer(Modifier.height(10.dp))
-                            out.summary.fields.forEach { (k, v) ->
-                                Row(Modifier.padding(vertical = 2.dp)) {
-                                    Text(k, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.width(84.dp))
-                                    Text(v, style = MaterialTheme.typography.bodyMedium, color = p.text)
-                                }
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            BlicoButton("Confirmar", onClick = { onConfirm(out.call) })
-                        }
+                        OutcomeDetails(out, onChoose = onChoose, onConfirm = onConfirm)
                     }
 
                     val finished = !thinking && (state.phase == Phase.FAILED || (state.phase == Phase.DONE && outcome != null && outcome !is Outcome.Done))
@@ -178,4 +149,47 @@ private fun StatusDot(phase: Phase) {
             .size(12.dp)
             .background(color, CircleShape),
     )
+}
+
+/**
+ * O resultado de um pedido: a frase, as opções de escolha, os arquivos ou o cartão Confirmar.
+ * O mesmo no cartão do botão lateral e na tela inicial.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun OutcomeDetails(out: Outcome, onChoose: (ToolCall) -> Unit, onConfirm: (ToolCall) -> Unit) {
+    val p = LocalBlico.current
+    Column {
+        Text(
+            out.spoken,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (out is Outcome.Failed) p.danger else p.text,
+        )
+        // Escolha entre contatos: cada botão já leva a chamada completa.
+        if (out.choices.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                out.choices.forEach { (label, call) ->
+                    BlicoButton(label, onClick = { onChoose(call) }, primary = false)
+                }
+            }
+        }
+        // Arquivos encontrados: as ações voltam como chamadas, iguais às de voz.
+        if (out is Outcome.Files) {
+            Spacer(Modifier.height(8.dp))
+            FileResults(out.items, onAction = onChoose)
+        }
+        // Classe 2: o texto vem do resumo estruturado, nunca do modelo.
+        if (out is Outcome.Confirm) {
+            Spacer(Modifier.height(10.dp))
+            out.summary.fields.forEach { (k, v) ->
+                Row(Modifier.padding(vertical = 2.dp)) {
+                    Text(k.uppercase(), style = PanelLabel, color = p.muted, modifier = Modifier.width(84.dp).padding(top = 3.dp))
+                    Text(v, style = MaterialTheme.typography.bodyMedium, color = p.text)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            BlicoButton("Confirmar", onClick = { onConfirm(out.call) })
+        }
+    }
 }

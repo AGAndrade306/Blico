@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -35,6 +34,7 @@ import app.blico.core.GroupMessage
 import app.blico.core.GroupResult
 import app.blico.core.GroupRun
 import app.blico.core.Outcome
+import app.blico.ui.BlicoAvatar
 import app.blico.ui.BlicoButton
 import app.blico.ui.BlicoChip
 import app.blico.ui.BlicoLink
@@ -77,11 +77,11 @@ fun GroupChat(app: BlicoApp, members: List<AgentProfile>, onBack: () -> Unit) {
 
     LaunchedEffect(lines.size) { if (lines.isNotEmpty()) list.animateScrollToItem(lines.size - 1) }
 
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             BlicoLink("‹", onClick = onBack)
             members.take(5).forEach { m ->
-                AgentAvatar(m.name, size = 26.dp)
+                BlicoAvatar(m.name, size = 26.dp)
                 Spacer(Modifier.width(2.dp))
             }
             Spacer(Modifier.width(8.dp))

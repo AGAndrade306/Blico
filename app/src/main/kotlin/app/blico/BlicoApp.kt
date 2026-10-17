@@ -8,6 +8,7 @@ import app.blico.accounts.GoogleLogin
 import app.blico.brain.HttpCloudTransport
 import app.blico.brain.LiteRtLocalProvider
 import app.blico.brain.ModelStore
+import app.blico.core.ActivityLog
 import app.blico.core.AgentRunner
 import app.blico.core.GroupRunner
 import app.blico.core.Assistant
@@ -16,6 +17,7 @@ import app.blico.core.DirectActions
 import app.blico.core.ExecContext
 import app.blico.core.NeuralVoices
 import app.blico.core.OptionalProvider
+import app.blico.core.Outcome
 import app.blico.core.RedactingProvider
 import app.blico.core.RuleRouter
 import app.blico.core.SpeechOutput
@@ -34,6 +36,8 @@ import app.blico.voice.NeuralSpeechOutput
 import app.blico.voice.VoicePackStore
 import app.blico.voice.VoicePrefs
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
@@ -59,7 +63,7 @@ class BlicoApp : Application() {
     }
     private val voiceStore by lazy { getSharedPreferences("voz", MODE_PRIVATE) }
 
-    /** Motor, voz, velocidade e tom escolhidos na tela inicial. */
+    /** Motor, voz, velocidade e tom escolhidos em Ajustes. */
     var voicePrefs: VoicePrefs
         get() = VoicePrefs(
             engine = voiceStore.getString("motor", null),
@@ -151,6 +155,25 @@ class BlicoApp : Application() {
 
     fun say(text: String) {
         scope.launch { speech.speak(text) }
+    }
+
+    private val activityPrefs by lazy { getSharedPreferences("atividade", MODE_PRIVATE) }
+    private val activityFlow by lazy { MutableStateFlow(ActivityLog.decode(activityPrefs.getString("log", null))) }
+
+    /** O que o Blico fez, o mais novo primeiro. Fica só no celular. */
+    val activity: StateFlow<List<ActivityLog.Entry>> get() = activityFlow
+
+    /** Anota uma ação concluída, venha ela do botão lateral ou da tela inicial. */
+    fun record(outcome: Outcome) {
+        val entry = ActivityLog.entryFor(outcome, System.currentTimeMillis()) ?: return
+        val next = ActivityLog.add(activityFlow.value, entry)
+        activityFlow.value = next
+        activityPrefs.edit().putString("log", ActivityLog.encode(next)).apply()
+    }
+
+    fun clearActivity() {
+        activityFlow.value = emptyList()
+        activityPrefs.edit().remove("log").apply()
     }
 
     private val directPrefs by lazy { getSharedPreferences("direto", MODE_PRIVATE) }

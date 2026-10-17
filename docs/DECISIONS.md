@@ -159,3 +159,13 @@ O André quer que os agentes entrem nas contas dele. A escolha foi o Google (Age
 - **Ferramentas próprias sobre a API REST do Google, e não um servidor MCP**: a API é estável e documentada, e o celular fala com ela direto, sem precisar de outro servidor no meio. Sem login, as ferramentas nem aparecem aos modelos.
 - **Cliente MCP próprio e mínimo no `core`** (`McpClient`, `McpTool`) para os próximos serviços, como o Notion: initialize, tools/list e tools/call por Streamable HTTP, além do OAuth com PKCE (`OAuth`). Ficou no lugar do `kotlin-sdk` porque o `core` não depende de Ktor e esse subconjunto é pequeno e testável com fakes. Uma ferramenta de servidor MCP só executa direto se o servidor a marcar como leitura (`readOnlyHint`); o resto para no Confirmar. A descrição vinda do servidor é cortada e limpa, porque pode tentar dar ordens ao modelo.
 - **Novo exemplo `secretaria`**, que só usa as ferramentas do Google e prefere deixar rascunho a enviar.
+
+## 2026-10-17 — Visual "Painel" e abas
+
+André achou o app com cara de genérico e escolheu a direção "Painel" entre três propostas.
+
+- **Três abas: Início, Agentes e Ajustes** (`Shell.kt`). O Início virou o assistente: um bloco escuro para falar (o microfone só abre no toque, e fecha quando o app sai da frente), um campo para digitar, o próximo alarme do sistema, quantas ações o Blico fez hoje e a lista do que ele fez. A configuração que era a tela inicial foi para Ajustes. Agentes é a aba da conversa com agentes, que vem do pacote `app.blico.agents`.
+- **Tipografia:** Doto (matriz de pontos) só na marca, nos títulos das abas e nos números grandes; IBM Plex Sans no texto; IBM Plex Mono nos rótulos, nas opções e na lista de atividade. As três são OFL, cortadas para o alfabeto latino, em pesos fixos. A Inter saiu.
+- **Cores:** fundo cinza-pedra, cartões brancos como widgets, botão principal em tinta escura e o verde do logo só para o que está vivo (status, progresso, pronto). O app agora segue o modo escuro do sistema, com a mesma paleta em tons escuros.
+- **Atividade só no celular** (`ActivityLog`, testado no `core`): até 30 linhas com a frase que o Blico falou e a hora, só de ações concluídas, num arquivo de preferências do app (sem backup). Dá para limpar na própria lista.
+- Os componentes continuam em `app/ui/Theme.kt` com as mesmas assinaturas, mais `ScreenHeader`, `SectionLabel`, `DashedRule`, `LiveDot`, `DottedRing` e `BlicoAvatar` (cor tirada do nome, ou passada).

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.blico.BlicoApp
 import app.blico.accounts.GoogleLogin
+import app.blico.ui.BlicoAvatar
 import app.blico.ui.BlicoButton
 import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoLink
@@ -50,7 +51,7 @@ internal fun AccountsCard(app: BlicoApp) {
 
     BlicoCard(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AgentAvatar("google", size = 36.dp)
+            BlicoAvatar("google", size = 36.dp)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text("Conta Google", style = MaterialTheme.typography.titleMedium)
                 Text(

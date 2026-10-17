@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,11 +30,13 @@ import app.blico.BlicoApp
 import app.blico.core.AgentFile
 import app.blico.core.AgentProfile
 import app.blico.memory.AgentStore
+import app.blico.ui.BlicoAvatar
 import app.blico.ui.BlicoButton
 import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoLink
-import app.blico.ui.LargeTitle
 import app.blico.ui.LocalBlico
+import app.blico.ui.ScreenHeader
+import app.blico.ui.SectionLabel
 
 /** Para onde a tela de agentes está olhando. */
 private sealed interface Page {
@@ -49,12 +50,9 @@ private sealed interface Page {
     data object Group : Page
 }
 
-/**
- * Tela dos agentes: a lista, as equipes, o editor e a conversa. Feita para virar uma aba;
- * hoje abre pela [AgentsActivity].
- */
+/** A aba Agentes: a lista, as contas, as equipes, o editor e as conversas. Voltar leva à lista. */
 @Composable
-fun AgentsScreen(app: BlicoApp, onClose: () -> Unit = {}) {
+fun AgentsScreen(app: BlicoApp) {
     var page by remember { mutableStateOf<Page>(Page.List) }
     var refresh by remember { mutableIntStateOf(0) }
     val entries = remember(refresh) { app.agents.entries() }
@@ -69,7 +67,6 @@ fun AgentsScreen(app: BlicoApp, onClose: () -> Unit = {}) {
             onOpen = { page = Page.Chat(it) },
             onGroup = { page = Page.Group },
             onEdit = { page = Page.Edit(it) },
-            onClose = onClose,
         )
         is Page.Edit -> AgentEditor(
             app = app,
@@ -97,18 +94,15 @@ private fun AgentList(
     onOpen: (String) -> Unit,
     onGroup: () -> Unit,
     onEdit: (String?) -> Unit,
-    onClose: () -> Unit,
 ) {
     val p = LocalBlico.current
     val agents = entries.mapNotNull { it.agent }
     Column(
         Modifier
-            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(horizontal = 16.dp),
     ) {
-        BlicoLink("‹ Blico", onClick = onClose)
-        LargeTitle("Agentes", modifier = Modifier.padding(top = 4.dp))
+        ScreenHeader("Agentes", "${agents.size} ${if (agents.size == 1) "agente" else "agentes"}")
         Text(
             "Cada agente tem instruções, gatilhos e as ferramentas que você liberou. Um agente com equipe divide o pedido e conversa com os outros até terminar. Enviar e ligar sempre param no Confirmar.",
             style = MaterialTheme.typography.bodyMedium,
@@ -120,7 +114,7 @@ private fun AgentList(
             BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable(onClick = onGroup)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     agents.take(4).forEach { a ->
-                        AgentAvatar(a.name, size = 30.dp)
+                        BlicoAvatar(a.name, size = 30.dp)
                         Spacer(Modifier.width(2.dp))
                     }
                     Spacer(Modifier.width(10.dp))
@@ -133,20 +127,20 @@ private fun AgentList(
             }
         }
 
-        Text("CONTAS", style = MaterialTheme.typography.labelMedium, color = p.muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+        SectionLabel("Contas")
         AccountsCard(app)
 
         val leads = agents.filter { it.team.isNotEmpty() }
         if (leads.isNotEmpty()) {
-            Text("EQUIPES", style = MaterialTheme.typography.labelMedium, color = p.muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+            SectionLabel("Equipes")
             leads.forEach { lead -> TeamCard(lead, agents, onOpen) }
         }
 
-        Text("TODOS OS AGENTES", style = MaterialTheme.typography.labelMedium, color = p.muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+        SectionLabel("Todos os agentes")
         entries.forEach { e ->
             BlicoCard(Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable(enabled = e.agent != null) { onOpen(e.name) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    AgentAvatar(e.name)
+                    BlicoAvatar(e.name)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(e.name, style = MaterialTheme.typography.titleMedium)
@@ -179,7 +173,7 @@ private fun TeamCard(lead: AgentProfile, all: List<AgentProfile>, onOpen: (Strin
     val p = LocalBlico.current
     BlicoCard(Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onOpen(lead.name) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AgentAvatar(lead.name, size = 44.dp)
+            BlicoAvatar(lead.name, size = 44.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(lead.name, style = MaterialTheme.typography.titleMedium)
@@ -192,7 +186,7 @@ private fun TeamCard(lead: AgentProfile, all: List<AgentProfile>, onOpen: (Strin
             lead.team.forEach { name ->
                 val exists = all.any { it.name == name }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    AgentAvatar(name, size = 24.dp)
+                    BlicoAvatar(name, size = 24.dp)
                     Spacer(Modifier.width(6.dp))
                     Text(name, style = MaterialTheme.typography.bodySmall, color = if (exists) p.text else p.danger)
                 }

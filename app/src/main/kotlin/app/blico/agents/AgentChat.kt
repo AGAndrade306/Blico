@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,9 +39,11 @@ import app.blico.core.AgentResult
 import app.blico.core.AgentRun
 import app.blico.core.Outcome
 import app.blico.core.ToolCall
+import app.blico.ui.BlicoAvatar
 import app.blico.ui.BlicoButton
 import app.blico.ui.BlicoLink
 import app.blico.ui.LocalBlico
+import app.blico.ui.avatarColor
 import kotlinx.coroutines.launch
 
 /** Uma linha da conversa: o que você pediu ou o que um agente fez. */
@@ -88,10 +89,10 @@ fun AgentChat(app: BlicoApp, agent: AgentProfile, onBack: () -> Unit, onEdit: ()
 
     LaunchedEffect(lines.size) { if (lines.isNotEmpty()) list.animateScrollToItem(lines.size - 1) }
 
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             BlicoLink("‹", onClick = onBack)
-            AgentAvatar(agent.name, size = 32.dp)
+            BlicoAvatar(agent.name, size = 32.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(agent.name, style = MaterialTheme.typography.titleMedium)
@@ -197,10 +198,10 @@ internal fun LineView(line: Line, lead: String?) {
 @Composable
 private fun AgentLine(name: String, to: String?, content: @Composable () -> Unit) {
     Row(verticalAlignment = Alignment.Top) {
-        AgentAvatar(name, size = 32.dp)
+        BlicoAvatar(name, size = 32.dp)
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(name + (to?.let { " $it" } ?: ""), style = MaterialTheme.typography.labelMedium, color = agentTone(name))
+            Text(name + (to?.let { " $it" } ?: ""), style = MaterialTheme.typography.labelMedium, color = avatarColor(name))
             content()
         }
     }

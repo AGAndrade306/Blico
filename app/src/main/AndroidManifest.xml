@@ -67,11 +67,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".agents.AgentsActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-
         <!-- Assistente padrão: o sistema exige os três serviços abaixo. -->
         <service
             android:name=".assistant.BlicoVoiceInteractionService"
