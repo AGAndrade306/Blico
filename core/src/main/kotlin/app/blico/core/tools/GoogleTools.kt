@@ -239,3 +239,20 @@ private const val MAX_MAILS = 5
 private val HOUR = DateTimeFormatter.ofPattern("HH:mm")
 private val DAY = DateTimeFormatter.ofPattern("dd/MM")
 private val WHEN = DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm")
+
+/**
+ * Traduz o erro cru do login do Google para uma frase que diz o que fazer. O texto original
+ * só serve a quem desenvolve; aparece entre parênteses no fim, curto.
+ */
+fun googleLoginMessage(raw: String): String {
+    val r = raw.uppercase()
+    val text = when {
+        "UNREGISTERED_ON_API_CONSOLE" in r || "DEVELOPER_ERROR" in r || r.startsWith("10:") ->
+            "O Google ainda não reconhece este app. Falta liberar o Blico no Google Cloud ou instalar o APK assinado com a chave fixa (roteiro de login do Google)."
+        "CANCEL" in r || r.startsWith("16:") || r.startsWith("12501") -> "Login cancelado."
+        "NETWORK" in r || r.startsWith("7:") -> "Sem internet agora. Tente de novo."
+        else -> "Não consegui entrar no Google agora. Tente de novo."
+    }
+    val code = Regex("STATUS=([A-Z_]+)").find(r)?.groupValues?.get(1) ?: Regex("^(\\d+):").find(r)?.groupValues?.get(1)
+    return if (code == null || text == "Login cancelado.") text else "$text ($code)"
+}

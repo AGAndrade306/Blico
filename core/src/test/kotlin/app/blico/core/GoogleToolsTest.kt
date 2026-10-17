@@ -128,3 +128,19 @@ class GoogleToolsTest {
         assertEquals(null, parseDay("semana que vem", today))
     }
 }
+
+class GoogleLoginMessageTest {
+    @Test
+    fun `app nao registrado vira aviso com o que fazer`() {
+        val m = app.blico.core.tools.googleLoginMessage("8: [8] Unknown error [status=UNREGISTERED_ON_API_CONSOLE].")
+        assertTrue(m.startsWith("O Google ainda não reconhece este app."), m)
+        assertTrue(m.endsWith("(UNREGISTERED_ON_API_CONSOLE)"), m)
+    }
+
+    @Test
+    fun `cancelar e rede`() {
+        assertEquals("Login cancelado.", app.blico.core.tools.googleLoginMessage("16: Cancelled by user."))
+        assertEquals("Sem internet agora. Tente de novo. (7)", app.blico.core.tools.googleLoginMessage("7: NETWORK_ERROR"))
+        assertEquals("Não consegui entrar no Google agora. Tente de novo.", app.blico.core.tools.googleLoginMessage("algo estranho"))
+    }
+}
