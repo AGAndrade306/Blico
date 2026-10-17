@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import app.blico.core.tools.GoogleAccount
 import app.blico.core.tools.GoogleResponse
+import app.blico.core.tools.googleLoginMessage
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
@@ -44,14 +45,14 @@ class GoogleLogin(private val context: Context) : GoogleAccount {
         val intent = r.pendingIntent
         if (r.hasResolution() && intent != null) Step.Show(intent) else accept(r)
     } catch (e: Exception) {
-        Step.Failed(e.message ?: e.toString())
+        Step.Failed(googleLoginMessage(e.message ?: e.toString()))
     }
 
     /** A volta da tela do Google. */
     fun finish(data: Intent?): Step = try {
         accept(client.getAuthorizationResultFromIntent(data))
     } catch (e: Exception) {
-        Step.Failed(e.message ?: "O login foi cancelado")
+        Step.Failed(googleLoginMessage(e.message ?: "cancelado"))
     }
 
     /** Esquece o login aqui. O acesso some de vez em myaccount.google.com/permissions. */

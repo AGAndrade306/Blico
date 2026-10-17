@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
@@ -167,7 +168,10 @@ fun BlicoTheme(dark: Boolean? = null, content: @Composable () -> Unit) {
         )
     }
     CompositionLocalProvider(LocalBlico provides p) {
-        MaterialTheme(colorScheme = scheme, typography = remember { typography() }, content = content)
+        // Texto sem cor explícita segue o tema; sem isso, sai preto também no modo escuro.
+        MaterialTheme(colorScheme = scheme, typography = remember { typography() }) {
+            CompositionLocalProvider(LocalContentColor provides p.text, content = content)
+        }
     }
 }
 
