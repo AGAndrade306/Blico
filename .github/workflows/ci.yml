@@ -15,7 +15,20 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      # A chave fica nos segredos do repositório; em PR de fork ou sem segredo, o APK sai com a chave de debug.
+      - name: Chave de assinatura fixa
+        env:
+          KEYSTORE_BASE64: ${{ secrets.BLICO_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/blico.jks"
+            echo "BLICO_KEYSTORE_FILE=$RUNNER_TEMP/blico.jks" >> "$GITHUB_ENV"
+          fi
       - name: Testes, lint e APK debug
+        env:
+          BLICO_KEYSTORE_PASSWORD: ${{ secrets.BLICO_KEYSTORE_PASSWORD }}
+          BLICO_KEY_ALIAS: ${{ secrets.BLICO_KEY_ALIAS }}
+          BLICO_KEY_PASSWORD: ${{ secrets.BLICO_KEY_PASSWORD }}
         run: ./gradlew --stacktrace test lint assembleDebug
       - uses: actions/upload-artifact@v4
         if: success()

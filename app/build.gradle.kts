@@ -18,7 +18,24 @@ android {
         ndk { abiFilters += "arm64-v8a" }
     }
 
+    // Assinatura fixa vinda dos segredos do CI, para o login do Google reconhecer o app e um APK
+    // novo instalar por cima do antigo. Sem os segredos (build local), vale a chave de debug padrão.
+    val keystore = System.getenv("BLICO_KEYSTORE_FILE")?.let(::file)?.takeIf { it.exists() }
+    signingConfigs {
+        if (keystore != null) {
+            create("blico") {
+                storeFile = keystore
+                storePassword = System.getenv("BLICO_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("BLICO_KEY_ALIAS")
+                keyPassword = System.getenv("BLICO_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: System.getenv("BLICO_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        if (keystore != null) {
+            debug { signingConfig = signingConfigs.getByName("blico") }
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -61,4 +78,5 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.coroutines.android)
+    implementation(libs.play.services.auth)
 }

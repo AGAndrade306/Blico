@@ -147,3 +147,15 @@ A voz do sistema soava robótica.
 - **Pacotes baixados pelo DownloadManager**, com os dados móveis liberados (são bem menores que o Gemma), e abertos no celular só com o que o português usa. A extração recusa caminhos que saem da pasta da voz, no `core` (testado) e de novo no caminho resolvido pelo sistema.
 - **A voz do sistema continua como reserva**: sem voz neural baixada e escolhida, o Blico fala com o motor do Android, como antes.
 - **APK só com arm64-v8a.** O sherpa-onnx traz 120 MB de bibliotecas nativas para quatro arquiteturas; o S25 Ultra usa uma só.
+
+## 2026-10-17 — Login nos serviços: Google primeiro, pelo Play Services
+
+O André quer que os agentes entrem nas contas dele. A escolha foi o Google (Agenda e Gmail) primeiro.
+
+- **O login é o do próprio Android** (`AuthorizationClient` do Play Services, em `GoogleLogin`). A pessoa escolhe a conta e aceita os acessos numa tela do Google; o Blico recebe só um acesso de uma hora, que fica na memória e é renovado em silêncio. Não há senha, segredo de cliente nem ID no código: o Google reconhece o app pelo pacote `app.blico` e pela assinatura.
+- **Assinatura fixa no CI**, vinda dos segredos do repositório (`BLICO_KEYSTORE_*`). Antes, cada build saía com uma chave de debug nova, e o Google recusaria o login. Sem os segredos, o build continua com a chave de debug padrão.
+- **O Blico fala direto com o Google**, sem passar pelo servidor próprio, que segue sem guardar nada de ninguém. O que vem da Agenda e do Gmail é dado não confiável no laço dos agentes e passa pelo `Redactor` antes de ir para a nuvem (regras 3 e 5). Enviar o e-mail ou criar o evento na conta da pessoa é a própria ação pedida, e por isso passa pelo Confirmar em vez do mascaramento.
+- **Classes de risco:** ver agenda e ler e-mails são leitura (0); rascunho no Gmail é preparar (1); criar evento e enviar e-mail são compromisso (2) e param no Confirmar, com o texto montado da chamada.
+- **Ferramentas próprias sobre a API REST do Google, e não um servidor MCP**: a API é estável e documentada, e o celular fala com ela direto, sem precisar de outro servidor no meio. Sem login, as ferramentas nem aparecem aos modelos.
+- **Cliente MCP próprio e mínimo no `core`** (`McpClient`, `McpTool`) para os próximos serviços, como o Notion: initialize, tools/list e tools/call por Streamable HTTP, além do OAuth com PKCE (`OAuth`). Ficou no lugar do `kotlin-sdk` porque o `core` não depende de Ktor e esse subconjunto é pequeno e testável com fakes. Uma ferramenta de servidor MCP só executa direto se o servidor a marcar como leitura (`readOnlyHint`); o resto para no Confirmar. A descrição vinda do servidor é cortada e limpa, porque pode tentar dar ordens ao modelo.
+- **Novo exemplo `secretaria`**, que só usa as ferramentas do Google e prefere deixar rascunho a enviar.

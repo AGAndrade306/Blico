@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
+import app.blico.accounts.GoogleLogin
 import app.blico.brain.HttpCloudTransport
 import app.blico.brain.LiteRtLocalProvider
 import app.blico.brain.ModelStore
@@ -20,6 +21,7 @@ import app.blico.core.RuleRouter
 import app.blico.core.SpeechOutput
 import app.blico.core.ToolRegistry
 import app.blico.core.tools.builtinTools
+import app.blico.core.tools.googleTools
 import app.blico.executor.AndroidDeviceGateway
 import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
@@ -117,7 +119,10 @@ class BlicoApp : Application() {
         )
     }
 
-    val registry by lazy { ToolRegistry(builtinTools()) }
+    /** A conta Google, quando a pessoa entra. A Agenda e o Gmail só aparecem aos modelos depois disso. */
+    val google by lazy { GoogleLogin(this) }
+
+    val registry by lazy { ToolRegistry(builtinTools() + googleTools(google)) }
 
     /**
      * Primeiro as regras (instantâneas); depois o Gemma no aparelho; só o que os dois não

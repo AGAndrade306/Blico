@@ -1,6 +1,9 @@
 package app.blico.core
 
+import app.blico.core.tools.GoogleAccount
+import app.blico.core.tools.GoogleResponse
 import app.blico.core.tools.builtinTools
+import app.blico.core.tools.googleTools
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -53,7 +56,11 @@ class AgentFileTest {
 
     @Test
     fun `exemplos sao validos e so usam ferramentas que existem`() {
-        val registry = ToolRegistry(builtinTools())
+        val offline = object : GoogleAccount {
+            override val connected = false
+            override suspend fun request(method: String, url: String, body: String?) = GoogleResponse(401, "")
+        }
+        val registry = ToolRegistry(builtinTools() + googleTools(offline))
         AgentFile.EXAMPLES.forEach { (name, text) ->
             val a = AgentFile.parse(text)
             assertEquals(name, a.name)

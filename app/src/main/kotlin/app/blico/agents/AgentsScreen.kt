@@ -133,6 +133,9 @@ private fun AgentList(
             }
         }
 
+        Text("CONTAS", style = MaterialTheme.typography.labelMedium, color = p.muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+        AccountsCard(app)
+
         val leads = agents.filter { it.team.isNotEmpty() }
         if (leads.isNotEmpty()) {
             Text("EQUIPES", style = MaterialTheme.typography.labelMedium, color = p.muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
