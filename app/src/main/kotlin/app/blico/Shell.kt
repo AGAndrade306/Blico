@@ -30,8 +30,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.blico.ui.DashedRule
-import app.blico.ui.LiveDot
 import app.blico.ui.LocalBlico
 import app.blico.ui.PanelLabel
 import app.blico.ui.screen
@@ -71,12 +71,17 @@ private fun TabBar(tab: Tab, onTab: (Tab) -> Unit) {
                         .fillMaxSize()
                         .semantics { selected = on }
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { onTab(t) }
-                        .padding(top = 10.dp),
+                        .padding(top = 14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    LiveDot(if (on) p.green else p.separator, size = if (on) 9.dp else 7.dp)
-                    Spacer(Modifier.height(7.dp))
-                    Text(t.label.uppercase(), style = PanelLabel, color = if (on) p.text else p.muted)
+                    // Aba aberta entre colchetes, como num menu de terminal.
+                    Text(
+                        if (on) "[ ${t.label.uppercase()} ]" else t.label.uppercase(),
+                        style = PanelLabel.copy(fontSize = 12.sp),
+                        color = if (on) p.text else p.muted,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(if (on) "^" else " ", style = PanelLabel, color = p.green)
                 }
             }
         }

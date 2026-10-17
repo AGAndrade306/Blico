@@ -170,6 +170,15 @@ André achou o app com cara de genérico e escolheu a direção "Painel" entre t
 - **Atividade só no celular** (`ActivityLog`, testado no `core`): até 30 linhas com a frase que o Blico falou e a hora, só de ações concluídas, num arquivo de preferências do app (sem backup). Dá para limpar na própria lista.
 - Os componentes continuam em `app/ui/Theme.kt` com as mesmas assinaturas, mais `ScreenHeader`, `SectionLabel`, `DashedRule`, `LiveDot`, `DottedRing` e `BlicoAvatar` (cor tirada do nome, ou passada).
 
+## 2026-10-17 — ASCII no lugar dos pontinhos
+
+André achou os pontos (fonte Doto, anel pontilhado, progresso em pontos) parecidos demais com o visual da Nothing e pediu ASCII, mantendo a diagramação do Painel.
+
+- **Mesma diagramação, outro acabamento:** os widgets, o bloco escuro, as abas e a lista de atividade continuam no lugar.
+- **Marca em letreiro ASCII** (figlet "small"), títulos de aba em IBM Plex Mono sublinhados com `=`, seções como `// ATIVIDADE`, aba aberta como `[ INÍCIO ]`, status `[*]`, marcas `[x]` e `[ ]`, progresso `[#####.....]` que ocupa a largura disponível.
+- **O botão de falar é um microfone em ASCII que vira um equalizador** de barras `|` enquanto o Blico ouve.
+- **A Doto saiu**; números grandes ficam em IBM Plex Mono SemiBold. O texto corrido continua em IBM Plex Sans.
+
 ## 2026-10-17 — Respostas direto no card
 
 André pediu que pergunta pontual seja respondida no card, sem mandar para o navegador, e que pesquisa ampla abra o navegador e ainda deixe um resumo no card.

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoLink
 import app.blico.ui.BlicoTheme
 import app.blico.ui.PanelLabel
+import app.blico.ui.StatusMark
 import app.blico.core.ToolCall
 import app.blico.voice.ListeningState
 import app.blico.voice.ListeningState.Phase
@@ -149,19 +149,15 @@ internal fun AssistantOverlay(
     }
 }
 
+/** Status no tema ASCII: [*] verde ouvindo, [*] vermelho na falha, [ ] no resto. */
 @Composable
 private fun StatusDot(phase: Phase) {
     val p = LocalBlico.current
-    val color = when (phase) {
-        Phase.LISTENING, Phase.HEARING -> p.green
-        Phase.FAILED -> p.danger
-        else -> p.muted
+    when (phase) {
+        Phase.LISTENING, Phase.HEARING -> StatusMark(on = true)
+        Phase.FAILED -> StatusMark(on = true, color = p.danger)
+        else -> StatusMark(on = false)
     }
-    Box(
-        Modifier
-            .size(12.dp)
-            .background(color, CircleShape),
-    )
 }
 
 /**

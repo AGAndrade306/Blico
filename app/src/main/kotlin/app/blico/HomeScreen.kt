@@ -2,17 +2,10 @@ package app.blico
 
 import android.app.AlarmManager
 import android.content.Intent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -22,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -43,10 +35,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.random.Random
 import androidx.compose.ui.unit.dp
 import app.blico.assistant.OutcomeDetails
 import app.blico.core.ActivityLog
@@ -60,10 +58,10 @@ import app.blico.ui.BlicoChip
 import app.blico.ui.BlicoLink
 import app.blico.ui.CardShape
 import app.blico.ui.DashedRule
-import app.blico.ui.DottedRing
-import app.blico.ui.LiveDot
 import app.blico.ui.LocalBlico
 import app.blico.ui.PanelLabel
+import app.blico.ui.PlexMono
+import app.blico.ui.StatusMark
 import app.blico.ui.SectionLabel
 import app.blico.voice.ListeningState
 import app.blico.voice.ListeningState.Phase
@@ -166,10 +164,16 @@ fun HomeScreen(
             .padding(horizontal = 16.dp)
             .padding(bottom = 24.dp),
     ) {
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("BLICO", style = MaterialTheme.typography.displaySmall, color = p.text, modifier = Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp), verticalAlignment = Alignment.Bottom) {
+            Text(
+                BANNER,
+                style = TextStyle(fontFamily = PlexMono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 12.sp),
+                color = p.text,
+                softWrap = false,
+                modifier = Modifier.weight(1f).semantics { contentDescription = "Blico" },
+            )
             val cloud = app.cloudFallback && app.cloudConfigured
-            LiveDot(if (cloud) p.muted else p.green)
+            StatusMark(on = true, color = if (cloud) p.muted else p.green)
             Spacer(Modifier.width(6.dp))
             Text(if (cloud) "CELULAR + NUVEM" else "SÓ NO CELULAR", style = PanelLabel, color = p.text)
         }
@@ -243,12 +247,18 @@ fun HomeScreen(
     }
 }
 
-/** O bloco escuro: anel de pontos e o que o Blico está fazendo. Tocar de novo para de ouvir. */
+/** O bloco escuro: um microfone em ASCII que vira equalizador enquanto ouve. Tocar de novo para de ouvir. */
 @Composable
 private fun TalkTile(state: ListeningState?, active: Boolean, onClick: () -> Unit) {
     val p = LocalBlico.current
-    val spin = rememberInfiniteTransition(label = "anel")
-    val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "giro")
+    var levels by remember { mutableStateOf(List(EQ_COLUMNS) { 0 }) }
+    LaunchedEffect(active) {
+        if (!active) levels = List(EQ_COLUMNS) { 0 }
+        while (active) {
+            levels = List(EQ_COLUMNS) { Random.nextInt(1, 4) }
+            delay(120)
+        }
+    }
     val (title, detail) = when {
         state == null -> "Toque e fale" to "ou segure o botão lateral"
         state.phase == Phase.FAILED -> state.label to "Toque para tentar de novo"
@@ -263,16 +273,42 @@ private fun TalkTile(state: ListeningState?, active: Boolean, onClick: () -> Uni
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-            DottedRing(Modifier.size(64.dp).rotate(if (active) angle else 0f), color = p.green, strokeWidth = 3.5.dp, dots = 24)
-            LiveDot(if (active) p.green else p.onInk, size = if (active) 18.dp else 14.dp)
-        }
+        Text(
+            if (active) equalizer(levels) else MIC,
+            style = TextStyle(fontFamily = PlexMono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 15.sp),
+            color = p.green,
+            softWrap = false,
+        )
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleLarge, color = p.onInk)
             if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodyMedium, color = p.onInk.copy(alpha = 0.7f))
         }
     }
+}
+
+/** A marca em letreiro ASCII (figlet "small"). */
+private val BANNER = listOf(
+    " ___ _    ___ ___ ___  ",
+    "| _ ) |  |_ _/ __/ _ \\ ",
+    "| _ \\ |__ | | (_| (_) |",
+    "|___/____|___\\___\\___/ ",
+).joinToString("\n")
+
+/** Microfone parado: a mesma caixa do equalizador, para o bloco não pular quando começa a ouvir. */
+private val MIC = listOf(
+    ".-------.",
+    "|  (o)  |",
+    "|   |   |",
+    "'-------'",
+).joinToString("\n")
+
+private const val EQ_COLUMNS = 7
+
+/** Equalizador de três linhas: cada coluna sobe até [levels] (1 a 3). */
+private fun equalizer(levels: List<Int>): String {
+    fun row(min: Int) = levels.joinToString("") { if (it >= min) "|" else if (min == 1) "." else " " }
+    return listOf(".-------.", "|" + row(3) + "|", "|" + row(2) + "|", "'" + row(1).replace(' ', '-') + "'").joinToString("\n")
 }
 
 @Composable
