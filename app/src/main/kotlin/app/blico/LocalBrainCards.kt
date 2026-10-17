@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,10 +27,10 @@ import app.blico.brain.LocalModel
 import app.blico.brain.ModelDownload
 import app.blico.core.Benchmark
 import app.blico.ui.BlicoButton
+import app.blico.ui.BlicoLink
 import app.blico.ui.LocalBlico
 import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoProgress
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -121,57 +124,82 @@ fun LocalModelCard(app: BlicoApp) {
     }
 }
 
-/** Mede o cérebro do celular nos 100 comandos do benchmark: acerto e tempo. */
+/**
+ * Mede o cérebro do celular nos 100 comandos do benchmark: acerto e tempo.
+ * Roda no app, então continua se a tela fechar; os resultados aparecem um a um.
+ */
 @Composable
 fun LocalBenchmarkCard(app: BlicoApp) {
-    val scope = rememberCoroutineScope()
-    var job by remember { mutableStateOf<Job?>(null) }
-    var progress by remember { mutableStateOf("") }
-    var summary by remember { mutableStateOf<String?>(null) }
-    var misses by remember { mutableStateOf<List<String>>(emptyList()) }
+    val p = LocalBlico.current
+    val state by app.benchmark.state.collectAsState()
+    var showMisses by remember { mutableStateOf(false) }
     val ready = app.local.isReady()
 
     BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Column {
-            Text("Benchmark do cérebro no celular", style = MaterialTheme.typography.titleMedium)
-            Text(
-                if (ready) {
-                    "Roda 100 pedidos variados direto no Gemma, sem as regras e sem a nuvem, e mostra quanto ele acerta e quanto demora."
-                } else {
-                    "Baixe um modelo em Cérebro no celular para medir."
-                },
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(Modifier.height(8.dp))
-            if (job == null) {
-                BlicoButton("Rodar benchmark", enabled = ready, onClick = {
-                    summary = null
-                    misses = emptyList()
-                    job = scope.launch {
-                        try {
-                            val tools = app.assistant.modelTools()
-                            val report = Benchmark.run(app.local, Benchmark.builtin(), tools) { done, total -> progress = "$done de $total" }
-                            summary = "${app.models.selected?.label} na ${app.local.backend ?: "CPU"}\n" + report.summary()
-                            misses = report.results.filterNot { it.passed(report.minConfidence) }.map { r ->
-                                val got = r.error ?: r.decision?.let { d ->
-                                    d.calls.firstOrNull()?.let { c -> "${c.tool} ${c.args}" } ?: d.answer?.take(60) ?: "passou a vez"
-                                }
-                                "“${r.case.text}” → $got"
-                            }
-                        } finally {
-                            job = null
-                        }
-                    }
-                })
+        Text("Benchmark do cérebro no celular", style = MaterialTheme.typography.titleMedium)
+        Text(
+            if (ready || state.running) {
+                "Roda 100 pedidos variados direto no Gemma, sem as regras e sem a nuvem, e mostra quanto ele acerta e quanto demora. " +
+                    "Pode sair desta tela: ele continua rodando."
             } else {
-                Text("Rodando: $progress", style = MaterialTheme.typography.bodyMedium)
-                BlicoButton("Parar", primary = false, onClick = { job?.cancel() })
+                "Baixe um modelo em Cérebro no celular para medir."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = p.muted,
+        )
+        Spacer(Modifier.height(10.dp))
+
+        if (state.running) {
+            val done = state.results.size
+            Text(
+                "${state.label}: $done de ${state.total}" + if (done > 0) " · acertou ${state.passed}" else " · carregando o modelo…",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            BlicoProgress(done.toFloat() / state.total.coerceAtLeast(1), Modifier.padding(vertical = 8.dp))
+            // Os últimos pedidos, do mais novo para o mais antigo.
+            state.results.takeLast(5).asReversed().forEach { r -> ResultRow(r, state.minConfidence) }
+            BlicoButton("Parar", primary = false, onClick = { app.benchmark.stop() }, modifier = Modifier.padding(top = 6.dp))
+        } else {
+            BlicoButton(if (state.last == null) "Rodar benchmark" else "Rodar de novo", enabled = ready, onClick = {
+                showMisses = false
+                app.benchmark.start()
+            })
+        }
+
+        state.last?.takeIf { !state.running }?.let { last ->
+            Spacer(Modifier.height(12.dp))
+            Text("Último resultado · ${last.label} · ${last.at}", style = MaterialTheme.typography.labelMedium, color = p.muted)
+            Text(last.summary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
+            if (last.misses.isNotEmpty()) {
+                BlicoLink(
+                    if (showMisses) "Esconder os erros" else "Ver os ${last.misses.size} erros",
+                    onClick = { showMisses = !showMisses },
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                if (showMisses) {
+                    last.misses.forEach { miss ->
+                        Text(miss, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 5.dp))
+                    }
+                }
             }
-            summary?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
-            if (misses.isNotEmpty()) {
-                Text("Erros", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
-                misses.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-            }
+        }
+    }
+}
+
+@Composable
+private fun ResultRow(r: Benchmark.Result, minConfidence: Double) {
+    val p = LocalBlico.current
+    val ok = r.passed(minConfidence)
+    Row(Modifier.padding(vertical = 3.dp)) {
+        Text(if (ok) "✓" else "✗", color = if (ok) p.green else p.danger, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(20.dp))
+        Column(Modifier.weight(1f)) {
+            Text(r.case.text, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                (if (ok) "" else "esperado ${r.wanted} · ") + "veio ${r.got(minConfidence)} · " +
+                    "%.1f s".format(java.util.Locale.forLanguageTag("pt-BR"), r.millis / 1000.0),
+                style = MaterialTheme.typography.bodySmall,
+                color = p.muted,
+            )
         }
     }
 }

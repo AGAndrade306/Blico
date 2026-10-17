@@ -1,7 +1,6 @@
 package app.blico.executor
 
 import android.Manifest
-import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -13,6 +12,7 @@ import android.telecom.TelecomManager
 import app.blico.core.DeviceAction
 import app.blico.core.DeviceGateway
 import app.blico.core.DeviceResult
+import app.blico.core.tools.Apps
 import app.blico.executor.BlicoAccessibilityService.SendStep
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -54,7 +54,10 @@ class AndroidDeviceGateway(
                     .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
                     .apply { action.label?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) } },
             )
-            is DeviceAction.WebSearch -> start(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, action.query))
+            // DuckDuckGo por privacidade: o app dele se estiver instalado, senão o navegador padrão.
+            is DeviceAction.WebSearch -> start(
+                Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).apply { if (isInstalled(Apps.DUCKDUCKGO)) setPackage(Apps.DUCKDUCKGO) },
+            )
             is DeviceAction.ShareText -> shareText(action)
             is DeviceAction.OpenFile -> start(
                 Intent(Intent.ACTION_VIEW)

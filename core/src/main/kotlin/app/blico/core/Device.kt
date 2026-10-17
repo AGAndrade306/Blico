@@ -27,7 +27,11 @@ sealed interface DeviceAction {
 
     data class SetTimer(val seconds: Int, val label: String? = null) : DeviceAction
 
-    data class WebSearch(val query: String) : DeviceAction
+    /** Pesquisa no DuckDuckGo, que não monta perfil de quem pesquisa. Abre no app dele, se houver, ou no navegador. */
+    data class WebSearch(val query: String) : DeviceAction {
+        val url: String
+            get() = "https://duckduckgo.com/?q=" + java.net.URLEncoder.encode(query, Charsets.UTF_8).replace("+", "%20")
+    }
 
     /** Compartilha texto com um app; o usuário escolhe o destinatário lá dentro. */
     data class ShareText(val text: String, val packageName: String? = null) : DeviceAction

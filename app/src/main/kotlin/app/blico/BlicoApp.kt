@@ -99,6 +99,8 @@ class BlicoApp : Application() {
         )
     }
 
+    val benchmark by lazy { BenchmarkRunner(this, scope) }
+
     /** Carrega o modelo local enquanto a pessoa fala, para a resposta não esperar por isso. */
     fun warmUpLocal() {
         scope.launch { runCatching { local.warmUp() } }
