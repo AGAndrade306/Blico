@@ -65,7 +65,7 @@ import kotlinx.coroutines.launch
 /** O app: Início (o assistente), Agentes e Ajustes (permissões, vozes, cérebro e testes). */
 class MainActivity : ComponentActivity() {
     private var resumeTick by mutableIntStateOf(0)
-    private var visible by mutableStateOf(false)
+    private var inFront by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Barras transparentes; os ícones seguem o tema claro ou escuro do sistema.
@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 app = application as BlicoApp,
                                 tick = resumeTick,
-                                visible = visible,
+                                visible = inFront,
                                 pendingSteps = steps.count { !it },
                                 micGranted = steps.first(),
                                 onAskMic = { askMic.launch(Manifest.permission.RECORD_AUDIO) },
@@ -103,11 +103,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        visible = true
+        inFront = true
     }
 
     override fun onStop() {
-        visible = false // fecha o microfone da tela inicial
+        inFront = false // fecha o microfone da tela inicial
         super.onStop()
     }
 
