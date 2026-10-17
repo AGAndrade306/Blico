@@ -169,3 +169,12 @@ André achou o app com cara de genérico e escolheu a direção "Painel" entre t
 - **Cores:** fundo cinza-pedra, cartões brancos como widgets, botão principal em tinta escura e o verde do logo só para o que está vivo (status, progresso, pronto). O app agora segue o modo escuro do sistema, com a mesma paleta em tons escuros.
 - **Atividade só no celular** (`ActivityLog`, testado no `core`): até 30 linhas com a frase que o Blico falou e a hora, só de ações concluídas, num arquivo de preferências do app (sem backup). Dá para limpar na própria lista.
 - Os componentes continuam em `app/ui/Theme.kt` com as mesmas assinaturas, mais `ScreenHeader`, `SectionLabel`, `DashedRule`, `LiveDot`, `DottedRing` e `BlicoAvatar` (cor tirada do nome, ou passada).
+
+## 2026-10-17 — Muletas da fala fora do pedido
+
+André disse "pesquisa pra mim qual é a capital da Dinamarca" e o DuckDuckGo abriu com "para mim qual é a capital da Dinamarca": a regra de busca pegava tudo depois do verbo.
+
+- **Muletas no `RuleRouter`, logo depois do verbo** ("pra mim", "para mim", "pra gente", "aí", "por favor", "rapidinho", "agora", "já"), em todas as regras e não só na busca. Ali elas nunca são conteúdo, então podem sair sem risco.
+- **Nas pontas do valor só sai um conjunto menor** ("pra mim", "aí", "por favor", "rapidinho"): "abre o WhatsApp pra mim" vira "WhatsApp", mas "notícias de agora" fica inteira.
+- **O texto de uma mensagem não é limpo**: "manda pro João que ele traga o livro pra mim" leva "ele traga o livro pra mim", porque é a fala da pessoa para outra pessoa.
+- **Mais jeitos de pedir**: "você pode/poderia", "dá pra", "tem como", "quero que você", "me faz um favor", infinitivos ("pesquisar", "mandar", "me acordar") e "dá uma pesquisada". "aí" sem acento ficou de fora por colidir com "AI".
