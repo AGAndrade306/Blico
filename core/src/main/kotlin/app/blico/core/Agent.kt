@@ -45,6 +45,8 @@ data class AgentRun(
     /** 0 para o agente chamado pela pessoa, 1 para um membro da equipe dele. */
     val depth: Int = 0,
     val delegation: Delegation? = null,
+    /** O que já se disse na conversa em grupo, embrulhado como dado não confiável. */
+    val context: List<String> = emptyList(),
 )
 
 /** O pedido que o agente fez a um membro da equipe ([call]) e o membro parado no cartão. */
@@ -96,8 +98,13 @@ class AgentRunner(
     /** Todos os agentes configurados, para achar os membros de uma equipe. */
     private val directory: suspend () -> List<AgentProfile> = { emptyList() },
 ) {
-    suspend fun start(text: String, agent: AgentProfile, ctx: ExecContext, onEvent: (AgentEvent) -> Unit = {}): AgentResult =
-        next(AgentRun(text, agent), ctx, onEvent)
+    suspend fun start(
+        text: String,
+        agent: AgentProfile,
+        ctx: ExecContext,
+        context: List<String> = emptyList(),
+        onEvent: (AgentEvent) -> Unit = {},
+    ): AgentResult = next(AgentRun(text, agent, context = context), ctx, onEvent)
 
     /** Continua depois do toque: [call] é a chamada confirmada ou a opção escolhida. */
     suspend fun resume(run: AgentRun, call: ToolCall, ctx: ExecContext, confirmed: Boolean, onEvent: (AgentEvent) -> Unit = {}): AgentResult {
@@ -114,7 +121,13 @@ class AgentRunner(
             return finish(run, Outcome.Answer("Parei depois de ${run.steps.size} passos. ${summary(run)}"), onEvent)
         }
         val members = members(run)
-        val request = LlmRequest(run.text, tools(run.agent) + members.map(::DelegateTool), instructions = run.agent.instructions, history = run.steps)
+        val request = LlmRequest(
+            run.text,
+            tools(run.agent) + members.map(::DelegateTool),
+            context = run.context,
+            instructions = run.agent.instructions,
+            history = run.steps,
+        )
         var failure: Throwable? = null
         for (provider in providers) {
             val decision = try {

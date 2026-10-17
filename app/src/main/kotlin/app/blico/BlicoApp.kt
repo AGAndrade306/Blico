@@ -8,6 +8,7 @@ import app.blico.brain.HttpCloudTransport
 import app.blico.brain.LiteRtLocalProvider
 import app.blico.brain.ModelStore
 import app.blico.core.AgentRunner
+import app.blico.core.GroupRunner
 import app.blico.core.Assistant
 import app.blico.core.CloudProvider
 import app.blico.core.DirectActions
@@ -105,6 +106,9 @@ class BlicoApp : Application() {
     /** Agentes em arquivo. Rodam só com os modelos: as regras repetiriam o mesmo pedido a cada passo. */
     val agents by lazy { AgentStore(this) }
     val agentRunner by lazy { AgentRunner(brains, assistant, directory = { agents.agents() }) }
+
+    /** Conversa com vários agentes por @nome. */
+    val groupRunner by lazy { GroupRunner(agentRunner) }
 
     val benchmark by lazy { BenchmarkRunner(this, scope) }
 

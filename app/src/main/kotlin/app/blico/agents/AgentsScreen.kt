@@ -45,6 +45,8 @@ private sealed interface Page {
     data class Edit(val name: String?) : Page
 
     data class Chat(val name: String) : Page
+
+    data object Group : Page
 }
 
 /**
@@ -65,6 +67,7 @@ fun AgentsScreen(app: BlicoApp, onClose: () -> Unit = {}) {
             app = app,
             entries = entries,
             onOpen = { page = Page.Chat(it) },
+            onGroup = { page = Page.Group },
             onEdit = { page = Page.Edit(it) },
             onClose = onClose,
         )
@@ -74,6 +77,7 @@ fun AgentsScreen(app: BlicoApp, onClose: () -> Unit = {}) {
             others = agents.filter { it.name != p.name },
             onDone = { refresh++; page = Page.List },
         )
+        Page.Group -> GroupChat(app, agents, onBack = { page = Page.List })
         is Page.Chat -> {
             val agent = agents.firstOrNull { it.name == p.name }
             if (agent == null) {
@@ -91,6 +95,7 @@ private fun AgentList(
     app: BlicoApp,
     entries: List<AgentStore.Entry>,
     onOpen: (String) -> Unit,
+    onGroup: () -> Unit,
     onEdit: (String?) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -110,6 +115,23 @@ private fun AgentList(
             color = p.muted,
             modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
         )
+
+        if (agents.size >= 2) {
+            BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable(onClick = onGroup)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    agents.take(4).forEach { a ->
+                        AgentAvatar(a.name, size = 30.dp)
+                        Spacer(Modifier.width(2.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Conversa em grupo", style = MaterialTheme.typography.titleMedium)
+                        Text("Todos os agentes juntos. Chame cada um por @nome.", style = MaterialTheme.typography.bodySmall, color = p.muted)
+                    }
+                    Text("›", style = MaterialTheme.typography.titleLarge, color = p.muted)
+                }
+            }
+        }
 
         val leads = agents.filter { it.team.isNotEmpty() }
         if (leads.isNotEmpty()) {

@@ -46,7 +46,7 @@ import app.blico.ui.LocalBlico
 import kotlinx.coroutines.launch
 
 /** Uma linha da conversa: o que você pediu ou o que um agente fez. */
-private sealed interface Line {
+internal sealed interface Line {
     data class You(val text: String) : Line
 
     data class Event(val event: AgentEvent) : Line
@@ -156,7 +156,7 @@ fun AgentChat(app: BlicoApp, agent: AgentProfile, onBack: () -> Unit, onEdit: ()
 }
 
 @Composable
-private fun LineView(line: Line, lead: String) {
+internal fun LineView(line: Line, lead: String?) {
     val p = LocalBlico.current
     when (line) {
         is Line.You -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -166,7 +166,7 @@ private fun LineView(line: Line, lead: String) {
             is AgentEvent.Asked -> AgentLine(e.agent, "→ ${e.to}") { Bubble(e.text, background = p.card, color = p.text) }
             is AgentEvent.Said -> {
                 // O líder responde a você; um membro responde ao líder.
-                val to = if (e.agent == lead) null else "→ $lead"
+                val to = if (lead == null || e.agent == lead) null else "→ $lead"
                 AgentLine(e.agent, to) { Bubble(e.text, background = p.card, color = if (e.failed) p.danger else p.text) }
             }
             is AgentEvent.Acted -> {
@@ -221,7 +221,7 @@ private fun Bubble(text: String, background: Color, color: Color) {
 
 /** O cartão Confirmar ou a escolha, dentro da conversa. O texto vem da chamada, nunca do modelo. */
 @Composable
-private fun WaitingCard(
+internal fun WaitingCard(
     out: Outcome,
     onConfirm: (ToolCall) -> Unit,
     onChoose: (ToolCall) -> Unit,

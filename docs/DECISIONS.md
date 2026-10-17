@@ -127,3 +127,12 @@ André pediu uma tela só para os agentes, com agentes que conversam entre si e 
 
 - **Pesquisas vão para o DuckDuckGo**, por privacidade: ele não monta perfil de quem pesquisa. Abre no app do DuckDuckGo se estiver instalado; senão, no navegador padrão. Antes, a busca ia para o app de busca do sistema (o Google).
 - **O benchmark roda no escopo do app, não da tela** (`BenchmarkRunner`). Com o Gemma, 100 pedidos levam minutos; antes, sair da tela cancelava sem mostrar nada. Agora os resultados aparecem um a um (✓ ou ✗, o que veio e o tempo), e o resumo e os erros do último benchmark completo ficam guardados.
+
+## 2026-10-17 — Conversa em grupo com os agentes
+
+Inspirada no Grok Bot da xAI, que o André mostrou: vários agentes na mesma conversa, passando trabalho entre si.
+
+- **@nome escolhe quem fala** (`Mentions.split`): "@manha alarme às 6 @avisos avisa o João" vira um pedido para cada um, na ordem. Sem @, vai para o agente escolhido embaixo da conversa. Acento e caixa não importam.
+- **Um agente passa a vez citando @outro na resposta** (`GroupRunner`), até 3 vezes por mensagem sua, para dois agentes não conversarem sem fim gastando a nuvem.
+- **Cada agente vê as últimas 12 falas como dado não confiável** (`UntrustedContent`, origem `conversa`) e age só com as próprias ferramentas. O que um agente pede a outro pode vir de algo que ele leu; por isso o envio e a ligação continuam presos ao Confirmar, que para o grupo inteiro e continua do mesmo ponto.
+- **Do Grok Bot ficam de fora**, por privacidade (regras 5 e 6): o computador na nuvem ligado 24 horas, o login dos agentes nos seus sites e o aprendizado vendo a sua tela. Rotinas agendadas e papéis prontos entram depois, cada um no seu PR.
