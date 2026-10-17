@@ -179,6 +179,15 @@ André achou os pontos (fonte Doto, anel pontilhado, progresso em pontos) pareci
 - **O botão de falar é um microfone em ASCII que vira um equalizador** de barras `|` enquanto o Blico ouve.
 - **A Doto saiu**; números grandes ficam em IBM Plex Mono SemiBold. O texto corrido continua em IBM Plex Sans.
 
+## 2026-10-17 — Muletas da fala fora do pedido
+
+André disse "pesquisa pra mim qual é a capital da Dinamarca" e o DuckDuckGo abriu com "para mim qual é a capital da Dinamarca": a regra de busca pegava tudo depois do verbo.
+
+- **Muletas no `RuleRouter`, logo depois do verbo** ("pra mim", "para mim", "pra gente", "aí", "por favor", "rapidinho", "agora", "já"), em todas as regras e não só na busca. Ali elas nunca são conteúdo, então podem sair sem risco.
+- **Nas pontas do valor só sai um conjunto menor** ("pra mim", "aí", "por favor", "rapidinho"): "abre o WhatsApp pra mim" vira "WhatsApp", mas "notícias de agora" fica inteira.
+- **O texto de uma mensagem não é limpo**: "manda pro João que ele traga o livro pra mim" leva "ele traga o livro pra mim", porque é a fala da pessoa para outra pessoa.
+- **Mais jeitos de pedir**: "você pode/poderia", "dá pra", "tem como", "quero que você", "me faz um favor", infinitivos ("pesquisar", "mandar", "me acordar") e "dá uma pesquisada". "aí" sem acento ficou de fora por colidir com "AI".
+
 ## 2026-10-17 — Respostas direto no card
 
 André pediu que pergunta pontual seja respondida no card, sem mandar para o navegador, e que pesquisa ampla abra o navegador e ainda deixe um resumo no card.
