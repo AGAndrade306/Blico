@@ -17,8 +17,17 @@ data class VoiceOption(val name: String, val label: String, val quality: Int)
 /** Um motor de TTS instalado (Samsung, Google…). */
 data class EngineOption(val packageName: String, val label: String)
 
-/** O que a pessoa escolheu na tela de configuração. Vazio é o padrão do sistema. */
-data class VoicePrefs(val engine: String? = null, val voice: String? = null, val rate: Float = 1f, val pitch: Float = 1f)
+/**
+ * O que a pessoa escolheu na tela de configuração. Vazio é o padrão do sistema.
+ * [neural] é o id de uma voz de [app.blico.core.NeuralVoices]; quando ela está baixada, tem a preferência.
+ */
+data class VoicePrefs(
+    val engine: String? = null,
+    val voice: String? = null,
+    val rate: Float = 1f,
+    val pitch: Float = 1f,
+    val neural: String? = null,
+)
 
 /**
  * Fala em português com o TTS do Android, offline com a voz instalada.

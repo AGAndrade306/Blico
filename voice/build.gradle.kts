@@ -30,6 +30,8 @@ kotlin {
 dependencies {
     api(project(":core"))
     implementation(libs.coroutines.android)
+    implementation(libs.sherpa.onnx)
+    implementation(libs.commons.compress)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)

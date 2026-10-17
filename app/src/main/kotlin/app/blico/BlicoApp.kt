@@ -11,9 +11,11 @@ import app.blico.core.Assistant
 import app.blico.core.CloudProvider
 import app.blico.core.DirectActions
 import app.blico.core.ExecContext
+import app.blico.core.NeuralVoices
 import app.blico.core.OptionalProvider
 import app.blico.core.RedactingProvider
 import app.blico.core.RuleRouter
+import app.blico.core.SpeechOutput
 import app.blico.core.ToolRegistry
 import app.blico.core.tools.builtinTools
 import app.blico.executor.AndroidDeviceGateway
@@ -23,6 +25,8 @@ import app.blico.memory.AndroidContactDirectory
 import app.blico.memory.PrefsPlaceBook
 import app.blico.memory.SecretStore
 import app.blico.voice.AndroidSpeechOutput
+import app.blico.voice.NeuralSpeechOutput
+import app.blico.voice.VoicePackStore
 import app.blico.voice.VoicePrefs
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -31,7 +35,23 @@ import java.util.UUID
 
 /** Peças compartilhadas pelo processo. A fala vive aqui para não ser cortada quando o cartão fecha. */
 class BlicoApp : Application() {
-    val speech by lazy { AndroidSpeechOutput(this, voicePrefs) }
+    /** Voz do Android (Samsung, Google), usada quando não há voz neural baixada e escolhida. */
+    val systemSpeech by lazy { AndroidSpeechOutput(this, voicePrefs) }
+    val voicePacks by lazy { VoicePackStore(this) }
+    val neuralSpeech by lazy {
+        NeuralSpeechOutput(voicePacks) { NeuralVoices.byId(voicePrefs.neural)?.let { it to voicePrefs.rate } }
+    }
+
+    /** Fala com a voz neural se ela estiver pronta; senão, com a do sistema. */
+    val speech: SpeechOutput = object : SpeechOutput {
+        override suspend fun speak(text: String) =
+            if (neuralSpeech.isReady()) neuralSpeech.speak(text) else systemSpeech.speak(text)
+
+        override fun stop() {
+            neuralSpeech.stop()
+            systemSpeech.stop()
+        }
+    }
     private val voiceStore by lazy { getSharedPreferences("voz", MODE_PRIVATE) }
 
     /** Motor, voz, velocidade e tom escolhidos na tela inicial. */
@@ -41,6 +61,7 @@ class BlicoApp : Application() {
             voice = voiceStore.getString("voz", null),
             rate = voiceStore.getFloat("velocidade", 1f),
             pitch = voiceStore.getFloat("tom", 1f),
+            neural = voiceStore.getString("neural", null),
         )
         set(v) {
             voiceStore.edit()
@@ -48,8 +69,9 @@ class BlicoApp : Application() {
                 .putString("voz", v.voice)
                 .putFloat("velocidade", v.rate)
                 .putFloat("tom", v.pitch)
+                .putString("neural", v.neural)
                 .apply()
-            speech.configure(v)
+            systemSpeech.configure(v)
         }
     val files by lazy { MediaStoreFileIndex(this) }
 
@@ -104,6 +126,11 @@ class BlicoApp : Application() {
     /** Carrega o modelo local enquanto a pessoa fala, para a resposta não esperar por isso. */
     fun warmUpLocal() {
         scope.launch { runCatching { local.warmUp() } }
+    }
+
+    /** Carrega a voz neural enquanto a pessoa fala, para a resposta não esperar por isso. */
+    fun warmUpVoice() {
+        scope.launch { runCatching { neuralSpeech.warmUp() } }
     }
 
     fun say(text: String) {

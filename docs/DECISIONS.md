@@ -93,3 +93,14 @@ André pediu para não ter que tocar em "enviar" no WhatsApp nem no botão de li
 
 - **Pesquisas vão para o DuckDuckGo**, por privacidade: ele não monta perfil de quem pesquisa. Abre no app do DuckDuckGo se estiver instalado; senão, no navegador padrão. Antes, a busca ia para o app de busca do sistema (o Google).
 - **O benchmark roda no escopo do app, não da tela** (`BenchmarkRunner`). Com o Gemma, 100 pedidos levam minutos; antes, sair da tela cancelava sem mostrar nada. Agora os resultados aparecem um a um (✓ ou ✗, o que veio e o tempo), e o resumo e os erros do último benchmark completo ficam guardados.
+
+## 2026-10-17 — Vozes neurais no celular
+
+A voz do sistema soava robótica.
+
+- **sherpa-onnx 1.13.8 como motor** (Apache 2.0): roda Kokoro e Piper no aparelho, sem internet. O AAR oficial não está no Maven Central; o `settings.gradle.kts` baixa da release do GitHub, confere o SHA-256 e serve de um repositório Maven local em `.thirdparty/` (fora do git).
+- **Duas famílias de voz.** Kokoro v1.0 int8 (132 MB, três vozes em português: Dora, Alex e Santa) é a mais natural, mas gera devagar: cerca de 1 s de processamento por segundo de fala num servidor de 4 núcleos. Piper (67 MB por voz) gera em 5% do tempo da fala. Ficaram de fora a Edresson (sem o til nasal no vocabulário, o "ão" sai errado) e as vozes de Portugal.
+- **Fala frase por frase.** O texto é quebrado em frases (`NeuralVoices.chunks`) e a primeira toca enquanto a próxima é gerada, numa thread só do motor. Isso esconde a lentidão do Kokoro em respostas curtas.
+- **Pacotes baixados pelo DownloadManager**, com os dados móveis liberados (são bem menores que o Gemma), e abertos no celular só com o que o português usa. A extração recusa caminhos que saem da pasta da voz, no `core` (testado) e de novo no caminho resolvido pelo sistema.
+- **A voz do sistema continua como reserva**: sem voz neural baixada e escolhida, o Blico fala com o motor do Android, como antes.
+- **APK só com arm64-v8a.** O sherpa-onnx traz 120 MB de bibliotecas nativas para quatro arquiteturas; o S25 Ultra usa uma só.

@@ -75,6 +75,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
         super.onShow(args, showFlags)
         owner.onShow()
         app.warmUpLocal()
+        app.warmUpVoice()
         startListening()
     }
 
