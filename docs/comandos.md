@@ -15,6 +15,8 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "me acorda às 7", "alarme para seis e meia", "8 da noite" | Cria o alarme. |
 | "timer de 5 minutos", "cronômetro de meia hora" | Inicia o timer. |
 | "pesquisa preço do dólar" | Pesquisa no DuckDuckGo (no app dele, se estiver instalado, ou no navegador). |
+| "pesquisa qual é a capital da Dinamarca", "quanto é 15% de 80" | Pergunta pontual: a resposta aparece no card, do Gemma no celular ou do DuckDuckGo, com "Ver no navegador". Só abre o navegador se nenhum dos dois souber. |
+| "pesquisa carros elétricos", "receita de pão de queijo" | Pesquisa ampla: abre o DuckDuckGo e deixa no card um resumo raso ou por onde começar. |
 | "abre a câmera" | Abre qualquer app pelo nome. |
 | "acha o pdf do contrato", "fotos de ontem", "cadê a planilha de gastos", "procura o arquivo relatório desta semana" | Lista os arquivos no cartão. Toque num item para abrir, compartilhar ou renomear. Renomear pede um toque em Confirmar. |
 

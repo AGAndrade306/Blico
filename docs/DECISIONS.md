@@ -187,3 +187,14 @@ André disse "pesquisa pra mim qual é a capital da Dinamarca" e o DuckDuckGo ab
 - **Nas pontas do valor só sai um conjunto menor** ("pra mim", "aí", "por favor", "rapidinho"): "abre o WhatsApp pra mim" vira "WhatsApp", mas "notícias de agora" fica inteira.
 - **O texto de uma mensagem não é limpo**: "manda pro João que ele traga o livro pra mim" leva "ele traga o livro pra mim", porque é a fala da pessoa para outra pessoa.
 - **Mais jeitos de pedir**: "você pode/poderia", "dá pra", "tem como", "quero que você", "me faz um favor", infinitivos ("pesquisar", "mandar", "me acordar") e "dá uma pesquisada". "aí" sem acento ficou de fora por colidir com "AI".
+
+## 2026-10-17 — Respostas direto no card
+
+André pediu que pergunta pontual seja respondida no card, sem mandar para o navegador, e que pesquisa ampla abra o navegador e ainda deixe um resumo no card.
+
+- **Pontual ou ampla** (`WebQuery`, no `core`): regra simples sobre a consulta. Conta, "qual", "quanto", "quem", "quando", "o que é", "capital de", "cotação de" são pontuais; "receita", "dicas", "melhores", "como fazer", "história", "notícias" e o que não se encaixar são amplos. Na dúvida fica ampla, que ao menos abre o navegador como antes.
+- **Pontual**: primeiro o Gemma do celular; se ele disser que não sabe, a resposta instantânea do DuckDuckGo (`api.duckduckgo.com`, sem conta nem chave). Se nenhum souber, abre o navegador como antes. O card mostra a fonte e "Ver no navegador".
+- **Ampla**: abre o navegador primeiro e, enquanto ele carrega, o card pede ao Gemma um resumo raso ou por onde começar, usando o trecho do DuckDuckGo como referência. O cartão fica por cima do navegador até a pessoa fechar.
+- **Privacidade**: a consulta só vai para o DuckDuckGo se o `Redactor` não achar nada pessoal nela (nome da agenda, endereço cadastrado, telefone, e-mail). O trecho que volta entra no prompt por `UntrustedContent.wrap`. A nuvem não entra nesse caminho.
+- **Pergunta que ninguém entendeu** (o Gemma disse que não sabe e a nuvem está desligada ou não decidiu): se parece pergunta, vira busca em vez de "Ainda não sei fazer isso".
+- **Card de resposta**: o que a pessoa disse fica pequeno em cima, a resposta é o destaque (rolável quando é longa), com a fonte em mono, "Copiar" e o caminho para o navegador. As métricas do microfone desceram para o rodapé. O tema (pontos ou ASCII) é assunto de outra etapa e não muda aqui.

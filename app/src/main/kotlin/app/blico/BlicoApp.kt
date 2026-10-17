@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import app.blico.accounts.GoogleLogin
 import app.blico.brain.HttpCloudTransport
+import app.blico.brain.HttpWebFetch
 import app.blico.brain.LiteRtLocalProvider
 import app.blico.brain.ModelStore
 import app.blico.core.ActivityLog
@@ -13,6 +14,7 @@ import app.blico.core.AgentRunner
 import app.blico.core.GroupRunner
 import app.blico.core.Assistant
 import app.blico.core.CloudProvider
+import app.blico.core.DeviceKnowledge
 import app.blico.core.DirectActions
 import app.blico.core.ExecContext
 import app.blico.core.NeuralVoices
@@ -123,6 +125,18 @@ class BlicoApp : Application() {
         )
     }
 
+    /**
+     * Respostas no card: o Gemma do celular e a resposta instantânea do DuckDuckGo.
+     * A consulta só vai para o DuckDuckGo se não tiver nome da agenda, endereço, telefone ou e-mail.
+     */
+    private val knowledge by lazy {
+        DeviceKnowledge(
+            model = OptionalProvider(local) { local.isReady() },
+            fetch = { HttpWebFetch.get(it) },
+            knownEntities = { RedactingProvider.entitiesFrom(contacts.names(), places.all()) },
+        )
+    }
+
     /** A conta Google, quando a pessoa entra. A Agenda e o Gmail só aparecem aos modelos depois disso. */
     val google by lazy { GoogleLogin(this) }
 
@@ -200,5 +214,6 @@ class BlicoApp : Application() {
         places = places,
         files = files,
         direct = directActions(),
+        knowledge = knowledge,
     )
 }

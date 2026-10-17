@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +29,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import android.content.ClipData
 import app.blico.R
 import app.blico.core.Outcome
 import app.blico.ui.LocalBlico
@@ -38,6 +45,7 @@ import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoLink
 import app.blico.ui.BlicoTheme
 import app.blico.ui.PanelLabel
+import app.blico.ui.StatusMark
 import app.blico.core.ToolCall
 import app.blico.voice.ListeningState
 import app.blico.voice.ListeningState.Phase
@@ -91,32 +99,28 @@ internal fun AssistantOverlay(
                         StatusDot(state.phase)
                     }
 
+                    // O que a pessoa disse fica pequeno em cima; a resposta é o destaque.
                     if (state.text.isNotBlank()) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(state.text, style = MaterialTheme.typography.headlineSmall)
-                    }
-
-                    val metrics = listOfNotNull(
-                        state.setupMs?.let { "microfone em ${it} ms" },
-                        state.latencyMs?.let { "texto ${it} ms após a fala" },
-                    )
-                    if (metrics.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(14.dp))
+                        Text("VOCÊ", style = PanelLabel, color = p.muted)
+                        Spacer(Modifier.height(2.dp))
                         Text(
-                            metrics.joinToString(" · "),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = p.muted,
+                            state.text,
+                            style = if (outcome == null) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge,
+                            color = if (outcome == null) p.text else p.muted,
                         )
                     }
 
                     if (thinking) {
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(14.dp))
                         Text("Pensando…", style = MaterialTheme.typography.bodyLarge, color = p.muted)
                     }
 
                     outcome?.let { out ->
-                        Spacer(Modifier.height(12.dp))
-                        OutcomeDetails(out, onChoose = onChoose, onConfirm = onConfirm)
+                        Spacer(Modifier.height(14.dp))
+                        Text("BLICO", style = PanelLabel, color = p.muted)
+                        Spacer(Modifier.height(2.dp))
+                        OutcomeDetails(out, onChoose = onChoose, onConfirm = onConfirm, onShowBrowser = onClose)
                     }
 
                     val finished = !thinking && (state.phase == Phase.FAILED || (state.phase == Phase.DONE && outcome != null && outcome !is Outcome.Done))
@@ -130,36 +134,51 @@ internal fun AssistantOverlay(
                             }
                         }
                     }
+
+                    val metrics = listOfNotNull(
+                        state.setupMs?.let { "microfone em ${it} ms" },
+                        state.latencyMs?.let { "texto ${it} ms após a fala" },
+                    )
+                    if (metrics.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(metrics.joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = p.muted)
+                    }
                 }
             }
         }
     }
 }
 
+/** Status no tema ASCII: [*] verde ouvindo, [*] vermelho na falha, [ ] no resto. */
 @Composable
 private fun StatusDot(phase: Phase) {
     val p = LocalBlico.current
-    val color = when (phase) {
-        Phase.LISTENING, Phase.HEARING -> p.green
-        Phase.FAILED -> p.danger
-        else -> p.muted
+    when (phase) {
+        Phase.LISTENING, Phase.HEARING -> StatusMark(on = true)
+        Phase.FAILED -> StatusMark(on = true, color = p.danger)
+        else -> StatusMark(on = false)
     }
-    Box(
-        Modifier
-            .size(12.dp)
-            .background(color, CircleShape),
-    )
 }
 
 /**
- * O resultado de um pedido: a frase, as opções de escolha, os arquivos ou o cartão Confirmar.
- * O mesmo no cartão do botão lateral e na tela inicial.
+ * O resultado de um pedido: a resposta, as opções de escolha, os arquivos ou o cartão Confirmar.
+ * O mesmo no cartão do botão lateral e na tela inicial. [onShowBrowser] tira o cartão da frente
+ * quando a pesquisa já abriu por trás dele; sem ele, só avisa que abriu.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun OutcomeDetails(out: Outcome, onChoose: (ToolCall) -> Unit, onConfirm: (ToolCall) -> Unit) {
+internal fun OutcomeDetails(
+    out: Outcome,
+    onChoose: (ToolCall) -> Unit,
+    onConfirm: (ToolCall) -> Unit,
+    onShowBrowser: (() -> Unit)? = null,
+) {
     val p = LocalBlico.current
     Column {
+        if (out is Outcome.Answer) {
+            AnswerDetails(out, onChoose, onShowBrowser)
+            return@Column
+        }
         Text(
             out.spoken,
             style = MaterialTheme.typography.titleMedium,
@@ -191,5 +210,42 @@ internal fun OutcomeDetails(out: Outcome, onChoose: (ToolCall) -> Unit, onConfir
             Spacer(Modifier.height(12.dp))
             BlicoButton("Confirmar", onClick = { onConfirm(out.call) })
         }
+    }
+}
+
+/**
+ * Resposta no card: o texto grande e rolável, a fonte e o caminho para o navegador.
+ * Pergunta pontual oferece "Ver no navegador"; pesquisa ampla já abriu e o card guarda o resumo.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AnswerDetails(out: Outcome.Answer, onChoose: (ToolCall) -> Unit, onShowBrowser: (() -> Unit)?) {
+    val p = LocalBlico.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    Text(
+        out.spoken,
+        style = if (out.spoken.length <= 120) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium,
+        color = p.text,
+        modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()),
+    )
+    val meta = listOfNotNull(
+        out.source?.let { "FONTE · ${it.uppercase()}" },
+        "PESQUISA ABERTA NO NAVEGADOR".takeIf { out.browserOpened },
+    )
+    if (meta.isNotEmpty()) {
+        Spacer(Modifier.height(8.dp))
+        Text(meta.joinToString("  ·  "), style = PanelLabel, color = p.muted)
+    }
+    Spacer(Modifier.height(10.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val search = out.search
+        when {
+            search != null && !out.browserOpened ->
+                BlicoButton("Ver no navegador", onClick = { onChoose(ToolCall("abrir_pesquisa", mapOf("consulta" to search))) }, primary = false)
+            out.browserOpened && onShowBrowser != null ->
+                BlicoButton("Ir para a pesquisa", onClick = onShowBrowser, primary = false)
+        }
+        BlicoLink("Copiar", onClick = { scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Blico", out.spoken))) } })
     }
 }

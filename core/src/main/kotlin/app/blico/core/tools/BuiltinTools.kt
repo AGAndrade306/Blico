@@ -9,11 +9,12 @@ import app.blico.core.RiskClass
 import app.blico.core.Tool
 import app.blico.core.ToolCall
 import app.blico.core.ToolResult
+import app.blico.core.WebQuery
 
 /** Todas as ferramentas que o Blico tem hoje. */
 fun builtinTools(): List<Tool> = listOf(
     AbrirApp, SpotifyTocar, WhatsAppPreparar, WhatsAppEnviar, Ligar, LigarAgora, UberPreparar, NoventaENoveAbrir,
-    IfoodAbrir, Navegar, Alarme, Timer, BuscarWeb,
+    IfoodAbrir, Navegar, Alarme, Timer, BuscarWeb, AbrirPesquisa,
 ) + fileTools()
 
 internal object AbrirApp : BaseTool(
@@ -317,6 +318,50 @@ internal object BuscarWeb : BaseTool(
     required = setOf("consulta"),
     title = "Pesquisar",
 ) {
+    /**
+     * Pergunta pontual: responde no card (modelo do celular, depois DuckDuckGo) e só abre o navegador se nenhum souber.
+     * Pesquisa ampla: abre o navegador e deixa no card um resumo raso ou um direcionamento.
+     */
+    override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
+        val q = call.arg("consulta")!!
+        return when (WebQuery.classify(q)) {
+            WebQuery.Kind.POINTED -> pointed(q, ctx)
+            WebQuery.Kind.BROAD -> broad(q, ctx)
+        }
+    }
+
+    private suspend fun pointed(q: String, ctx: ExecContext): ToolResult {
+        ctx.knowledge.answer(q)?.let { return ToolResult.Answer(it, LOCAL_SOURCE, search = q) }
+        ctx.knowledge.lookup(q)?.let { return ToolResult.Answer(it.text, it.source, search = q) }
+        return ctx.device.perform(DeviceAction.WebSearch(q)).toToolResult("Pesquisando $q")
+    }
+
+    private suspend fun broad(q: String, ctx: ExecContext): ToolResult {
+        val opened = ctx.device.perform(DeviceAction.WebSearch(q))
+        if (opened != DeviceResult.Done) return opened.toToolResult("Pesquisando $q")
+        val web = ctx.knowledge.lookup(q)
+        val prompt = "Em no máximo duas frases curtas, dê um resumo raso ou diga por onde começar a pesquisa: $q"
+        val hint = ctx.knowledge.answer(prompt, web?.text)?.let { it to (if (web != null) "${web.source} + $LOCAL_SOURCE" else LOCAL_SOURCE) }
+            ?: web?.let { it.text to it.source }
+            ?: return ToolResult.Success("Pesquisando $q")
+        return ToolResult.Answer(hint.first, hint.second, search = q, browserOpened = true)
+    }
+
+    const val LOCAL_SOURCE = "Gemma no celular"
+}
+
+/** "Ver no navegador" no card de uma resposta. Só nasce do toque, por isso fica fora dos modelos. */
+internal object AbrirPesquisa : BaseTool(
+    name = "abrir_pesquisa",
+    description = "Abre a pesquisa no navegador",
+    risk = RiskClass.READ,
+    apps = emptySet(),
+    params = mapOf("consulta" to "o que pesquisar"),
+    required = setOf("consulta"),
+    title = "Pesquisar",
+) {
+    override val exposedToModels = false
+
     override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
         val q = call.arg("consulta")!!
         return ctx.device.perform(DeviceAction.WebSearch(q)).toToolResult("Pesquisando $q")
