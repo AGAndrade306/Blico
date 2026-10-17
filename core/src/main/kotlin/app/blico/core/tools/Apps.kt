@@ -8,4 +8,5 @@ object Apps {
     const val IFOOD = "br.com.brainweb.ifood"
     const val SPOTIFY = "com.spotify.music"
     const val GOOGLE_MAPS = "com.google.android.apps.maps"
+    const val DUCKDUCKGO = "com.duckduckgo.mobile.android"
 }

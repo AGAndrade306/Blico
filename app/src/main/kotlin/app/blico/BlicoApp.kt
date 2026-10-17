@@ -106,6 +106,8 @@ class BlicoApp : Application() {
     val agents by lazy { AgentStore(this) }
     val agentRunner by lazy { AgentRunner(brains, assistant, directory = { agents.agents() }) }
 
+    val benchmark by lazy { BenchmarkRunner(this, scope) }
+
     /** Carrega o modelo local enquanto a pessoa fala, para a resposta não esperar por isso. */
     fun warmUpLocal() {
         scope.launch { runCatching { local.warmUp() } }

@@ -76,6 +76,13 @@ class BuiltinToolsTest {
     }
 
     @Test
+    fun `busca vai para o DuckDuckGo`() = runTest {
+        run("buscar_web", "consulta" to "preço do dólar & euro")
+        val search = device.actions.single() as DeviceAction.WebSearch
+        assertEquals("https://duckduckgo.com/?q=pre%C3%A7o%20do%20d%C3%B3lar%20%26%20euro", search.url)
+    }
+
+    @Test
     fun `alarme timer e ligar`() = runTest {
         run("alarme", "hora" to "6", "minuto" to "30")
         run("timer", "segundos" to "300")

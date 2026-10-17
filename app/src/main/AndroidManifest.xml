@@ -37,6 +37,12 @@
         <package android:name="br.com.brainweb.ifood" />
         <package android:name="com.spotify.music" />
         <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.duckduckgo.mobile.android" />
+        <!-- Navegador padrão, para a busca no DuckDuckGo sem o app dele. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 
     <application

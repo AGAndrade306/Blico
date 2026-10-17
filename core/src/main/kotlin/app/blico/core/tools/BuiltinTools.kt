@@ -310,7 +310,7 @@ internal fun durationLabel(seconds: Int): String {
 
 internal object BuscarWeb : BaseTool(
     name = "buscar_web",
-    description = "Pesquisa na internet",
+    description = "Pesquisa na internet, no DuckDuckGo",
     risk = RiskClass.READ,
     apps = emptySet(),
     params = mapOf("consulta" to "o que pesquisar"),

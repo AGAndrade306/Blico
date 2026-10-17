@@ -122,3 +122,8 @@ André pediu uma tela só para os agentes, com agentes que conversam entre si e 
 - **Tela própria em `app/agents/`** (`AgentsScreen`, pronta para virar aba): equipes no topo, lista de agentes, editor por campos (nome, o que faz, gatilhos, ferramentas, equipe, passos, instruções) com a opção de editar o arquivo inteiro, e uma conversa em balões com o cartão Confirmar no meio. Enquanto não há abas, abre por `AgentsActivity`, a partir de um cartão na tela inicial. A casca de navegação e o `Theme.kt` ficam com o redesenho visual.
 - **Exemplos novos aparecem em atualizações** (`files/agentes/.exemplos` guarda os já criados), e um exemplo apagado não volta. Entrou o `organizador`, líder de `manha` e `avisos`.
 - **O Worker aceita no histórico ferramentas fora do catálogo** (como `whatsapp_enviar`) com uma descrição mínima, para cada `tool_use` ter a sua definição; elas não podem ser chamadas.
+
+## 2026-10-15 — Busca no DuckDuckGo e benchmark visível
+
+- **Pesquisas vão para o DuckDuckGo**, por privacidade: ele não monta perfil de quem pesquisa. Abre no app do DuckDuckGo se estiver instalado; senão, no navegador padrão. Antes, a busca ia para o app de busca do sistema (o Google).
+- **O benchmark roda no escopo do app, não da tela** (`BenchmarkRunner`). Com o Gemma, 100 pedidos levam minutos; antes, sair da tela cancelava sem mostrar nada. Agora os resultados aparecem um a um (✓ ou ✗, o que veio e o tempo), e o resumo e os erros do último benchmark completo ficam guardados.
