@@ -15,8 +15,16 @@ sealed interface Outcome {
 
     data class Failed(override val spoken: String, val reason: String) : Outcome
 
-    /** Resposta a uma pergunta: o Blico só fala, não executa nada. */
-    data class Answer(override val spoken: String) : Outcome
+    /**
+     * Resposta a uma pergunta: o Blico mostra no card e fala. [source] diz de onde veio;
+     * [search] é a consulta, para o card oferecer o navegador, e [browserOpened] diz que ele já abriu por trás.
+     */
+    data class Answer(
+        override val spoken: String,
+        val source: String? = null,
+        val search: String? = null,
+        val browserOpened: Boolean = false,
+    ) : Outcome
 
     data class NotUnderstood(override val spoken: String) : Outcome
 
@@ -51,6 +59,11 @@ class Assistant(
             decision.calls.firstOrNull()?.let { onRoute(provider.id); return execute(it, ctx) }
             decision.answer?.let { onRoute(provider.id); return Outcome.Answer(it) }
         }
+        // Ninguém entendeu, mas é uma pergunta: tenta a busca, que responde no card ou abre o navegador.
+        if (failure == null && WebQuery.isQuestion(text) && registry[SEARCH_TOOL] != null) {
+            onRoute("busca")
+            return execute(ToolCall(SEARCH_TOOL, mapOf("consulta" to text.trim().trimEnd('?', '.', '!'))), ctx)
+        }
         return when (failure) {
             is CloudUnavailable -> Outcome.Failed("Não consegui falar com a nuvem. ${failure.message}", failure.toString())
             null -> Outcome.NotUnderstood("Ainda não sei fazer isso")
@@ -76,6 +89,7 @@ class Assistant(
             is ToolResult.Failure -> Outcome.Failed(r.spoken, r.reason)
             is ToolResult.NeedsChoice -> Outcome.Choose(r.question, r.options)
             is ToolResult.Files -> Outcome.Files(r.spoken, r.items)
+            is ToolResult.Answer -> Outcome.Answer(r.spoken, r.source, r.search, r.browserOpened)
             // O passo seguinte passa pela política: uma ação de classe 2 vira o cartão Confirmar.
             // Um passo só, para uma ferramenta não encadear outra sem fim.
             is ToolResult.Then -> if (chained) {
@@ -88,5 +102,9 @@ class Assistant(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val SEARCH_TOOL = "buscar_web"
     }
 }

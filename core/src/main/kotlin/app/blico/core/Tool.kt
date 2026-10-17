@@ -30,6 +30,17 @@ sealed interface ToolResult {
      * depois de achar o número. A [call] passa pela política de risco como qualquer outra.
      */
     data class Then(val call: ToolCall) : ToolResult
+
+    /**
+     * Resposta para ler no card, de [source]. [search] é a consulta, para o card oferecer o navegador;
+     * [browserOpened] diz que a pesquisa já abriu por trás do card.
+     */
+    data class Answer(
+        val spoken: String,
+        val source: String? = null,
+        val search: String? = null,
+        val browserOpened: Boolean = false,
+    ) : ToolResult
 }
 
 /**
@@ -52,6 +63,8 @@ data class ExecContext(
     val files: FileIndex = FileIndex.None,
     val clock: java.time.Clock = java.time.Clock.systemDefaultZone(),
     val direct: DirectActions = DirectActions(),
+    /** Respostas rápidas para o card: o modelo do celular e o DuckDuckGo. */
+    val knowledge: Knowledge = Knowledge.None,
 )
 
 interface Tool {
