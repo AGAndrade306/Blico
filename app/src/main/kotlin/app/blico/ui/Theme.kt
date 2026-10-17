@@ -1,5 +1,9 @@
 package app.blico.ui
 
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
@@ -51,8 +56,9 @@ import app.blico.R
 
 /**
  * Visual "Painel": fundo cinza-pedra, cartões brancos como widgets, um bloco escuro para a ação
- * principal, números em matriz de pontos (Doto), texto em IBM Plex Sans e rótulos em IBM Plex Mono.
- * O verde do logo fica para o que está vivo: o ponto de status, o progresso, o que deu certo.
+ * principal. O acabamento é de terminal, em ASCII: a marca em letreiro, números e rótulos em
+ * IBM Plex Mono, progresso como `[####----]`, marcas `[x]`. O texto corrido fica em IBM Plex Sans.
+ * O verde do logo fica para o que está vivo: o status, o progresso, o que deu certo.
  */
 @Immutable
 data class BlicoPalette(
@@ -114,20 +120,18 @@ val PlexSans = FontFamily(
 val PlexMono = FontFamily(
     Font(R.font.plex_mono_regular, FontWeight.Normal),
     Font(R.font.plex_mono_medium, FontWeight.Medium),
+    Font(R.font.plex_mono_semibold, FontWeight.SemiBold),
 )
-
-/** Matriz de pontos, só para a marca e números grandes: em texto corrido ela cansa. */
-val Doto = FontFamily(Font(R.font.doto_800, FontWeight.ExtraBold))
 
 private fun typography(): Typography {
     fun sans(size: Int, line: Int, weight: FontWeight = FontWeight.Normal, tracking: Double = 0.0) =
         TextStyle(fontFamily = PlexSans, fontSize = size.sp, lineHeight = line.sp, fontWeight = weight, letterSpacing = tracking.sp)
-    fun dots(size: Int, line: Int) =
-        TextStyle(fontFamily = Doto, fontSize = size.sp, lineHeight = line.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
+    fun mono(size: Int, line: Int) =
+        TextStyle(fontFamily = PlexMono, fontSize = size.sp, lineHeight = line.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp)
     return Typography(
-        displayLarge = dots(48, 52),
-        displayMedium = dots(40, 44),
-        displaySmall = dots(32, 36),
+        displayLarge = mono(44, 50),
+        displayMedium = mono(36, 42),
+        displaySmall = mono(28, 34),
         headlineLarge = sans(28, 34, FontWeight.SemiBold, -0.3),
         headlineMedium = sans(24, 30, FontWeight.SemiBold, -0.2),
         headlineSmall = sans(21, 27, FontWeight.Medium, -0.1),
@@ -164,7 +168,10 @@ fun BlicoTheme(dark: Boolean? = null, content: @Composable () -> Unit) {
         )
     }
     CompositionLocalProvider(LocalBlico provides p) {
-        MaterialTheme(colorScheme = scheme, typography = remember { typography() }, content = content)
+        // Texto sem cor explícita segue o tema; sem isso, sai preto também no modo escuro.
+        MaterialTheme(colorScheme = scheme, typography = remember { typography() }) {
+            CompositionLocalProvider(LocalContentColor provides p.text, content = content)
+        }
     }
 }
 
@@ -172,20 +179,21 @@ fun BlicoTheme(dark: Boolean? = null, content: @Composable () -> Unit) {
 @Composable
 fun Modifier.screen(): Modifier = background(LocalBlico.current.background)
 
-/** Título grande em pontos. */
+/** Título grande em mono. */
 @Composable
 fun LargeTitle(text: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.displaySmall) {
     Text(text, style = style, color = LocalBlico.current.text, modifier = modifier)
 }
 
-/** Topo de cada aba: o nome em pontos e uma linha mono de contexto. */
+/** Topo de cada aba: o nome em mono, sublinhado com `=` como num terminal, e uma linha de contexto. */
 @Composable
 fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
     val p = LocalBlico.current
     Row(modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
             Text(title.uppercase(), style = MaterialTheme.typography.displaySmall, color = p.text)
-            if (subtitle != null) Text(subtitle.uppercase(), style = PanelLabel, color = p.muted, modifier = Modifier.padding(top = 2.dp))
+            Text("=".repeat(title.length), style = MaterialTheme.typography.displaySmall.copy(lineHeight = 18.sp), color = p.green, maxLines = 1)
+            if (subtitle != null) Text("> " + subtitle.uppercase(), style = PanelLabel, color = p.muted, modifier = Modifier.padding(top = 6.dp))
         }
         trailing()
     }
@@ -196,7 +204,7 @@ fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = M
 fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
     val p = LocalBlico.current
     Row(modifier.fillMaxWidth().padding(top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text.uppercase(), style = PanelLabel, color = p.muted)
+        Text("// " + text.uppercase(), style = PanelLabel, color = p.muted)
         Spacer(Modifier.width(10.dp))
         DashedRule(Modifier.weight(1f))
         trailing()
@@ -218,10 +226,11 @@ fun DashedRule(modifier: Modifier = Modifier) {
     }
 }
 
-/** Ponto de status: verde quando algo está ligado ou ouvindo. */
+/** Status em ASCII: `[*]` verde quando ligado, `[ ]` apagado. */
 @Composable
-fun LiveDot(color: Color = LocalBlico.current.green, modifier: Modifier = Modifier, size: Dp = 8.dp) {
-    Box(modifier.size(size).background(color, CircleShape))
+fun StatusMark(on: Boolean, modifier: Modifier = Modifier, color: Color = LocalBlico.current.green) {
+    val p = LocalBlico.current
+    Text(if (on) "[*]" else "[ ]", style = PanelLabel, color = if (on) color else p.muted, modifier = modifier)
 }
 
 val CardShape = RoundedCornerShape(14.dp)
@@ -306,47 +315,40 @@ fun BlicoChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: M
     )
 }
 
-/** Marca de passo: círculo verde com ✓ quando feito, contorno pontilhado quando falta. */
+/** Marca de passo: `[x]` verde quando feito, `[ ]` quando falta. */
 @Composable
 fun BlicoMark(done: Boolean?, modifier: Modifier = Modifier) {
     val p = LocalBlico.current
     if (done == null) return
-    if (done) {
-        Box(modifier.size(22.dp).clip(CircleShape).background(p.green), contentAlignment = Alignment.Center) {
-            Text("✓", style = MaterialTheme.typography.labelMedium.copy(fontFamily = PlexSans, fontWeight = FontWeight.SemiBold), color = p.onGreen)
-        }
-    } else {
-        DottedRing(modifier.size(22.dp), color = p.separator, strokeWidth = 2.dp, dots = 14)
-    }
+    Text(
+        if (done) "[x]" else "[ ]",
+        style = MaterialTheme.typography.titleMedium.copy(fontFamily = PlexMono),
+        color = if (done) p.green else p.muted,
+        modifier = modifier,
+    )
 }
 
-/** Anel de pontos, a assinatura do painel: em volta do botão de falar e nos passos que faltam. */
-@Composable
-fun DottedRing(modifier: Modifier = Modifier, color: Color = LocalBlico.current.green, strokeWidth: Dp = 3.dp, dots: Int = 28) {
-    Canvas(modifier) {
-        val stroke = strokeWidth.toPx()
-        val r = (size.minDimension - stroke) / 2
-        val c = center
-        repeat(dots) { i ->
-            val a = 2 * Math.PI * i / dots
-            drawCircle(color, radius = stroke / 2, center = Offset(c.x + r * Math.cos(a).toFloat(), c.y + r * Math.sin(a).toFloat()))
-        }
-    }
-}
-
-/** Progresso em pontos: verdes até onde chegou, cinza no resto. */
+/** Progresso em ASCII, `[######......]`, ocupando a largura que tiver. */
 @Composable
 fun BlicoProgress(fraction: Float, modifier: Modifier = Modifier) {
     val p = LocalBlico.current
     val f = fraction.coerceIn(0f, 1f)
-    Canvas(modifier.fillMaxWidth().height(6.dp)) {
-        val d = size.height
-        val step = d * 1.6f
-        val count = (size.width / step).toInt().coerceAtLeast(1)
-        val lit = (count * f).toInt()
-        repeat(count) { i ->
-            drawCircle(if (i < lit) p.green else p.fill, radius = d / 2, center = Offset(i * step + d / 2, d / 2))
-        }
+    val style = MaterialTheme.typography.labelMedium
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        // Plex Mono tem avanço de 0,6 em; sobram duas casas para os colchetes.
+        val cells = ((maxWidth.value / (style.fontSize.value * 0.6f)).toInt() - 2).coerceIn(4, 60)
+        val lit = (cells * f).toInt()
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = p.muted)) { append("[") }
+                withStyle(SpanStyle(color = p.green)) { append("#".repeat(lit)) }
+                withStyle(SpanStyle(color = p.separator)) { append(".".repeat(cells - lit)) }
+                withStyle(SpanStyle(color = p.muted)) { append("]") }
+            },
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 
@@ -359,7 +361,7 @@ private val AvatarColors = listOf(
 /** A cor do avatar de [name], a mesma em todo lugar; serve também para o nome escrito ao lado. */
 fun avatarColor(name: String): Color = AvatarColors[Math.floorMod(name.trim().lowercase().hashCode(), AvatarColors.size)]
 
-/** Avatar redondo com a inicial em pontos. Sem [color], a cor sai do nome, sempre a mesma para ele. */
+/** Avatar redondo com a inicial em mono. Sem [color], a cor sai do nome, sempre a mesma para ele. */
 @Composable
 fun BlicoAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 36.dp, color: Color? = null) {
     val bg = color ?: avatarColor(name)
@@ -367,7 +369,7 @@ fun BlicoAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 36.dp, c
     Box(modifier.size(size).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
         Text(
             initial,
-            style = TextStyle(fontFamily = Doto, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.5f).sp),
+            style = TextStyle(fontFamily = PlexMono, fontWeight = FontWeight.SemiBold, fontSize = (size.value * 0.46f).sp),
             color = Color.White,
         )
     }
