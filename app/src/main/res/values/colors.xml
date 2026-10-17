@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fundo agrupado, o mesmo da tela inicial. -->
-    <color name="fundo">#F2F2F7</color>
+    <!-- Fundo de pedra do painel, o mesmo das telas do app. -->
+    <color name="fundo">#EDEDEA</color>
     <!-- Fundo do ícone: o papel do logo, também no modo escuro. -->
     <color name="icone_fundo">#FBF9EF</color>
 </resources>

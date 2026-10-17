@@ -104,3 +104,13 @@ A voz do sistema soava robótica.
 - **Pacotes baixados pelo DownloadManager**, com os dados móveis liberados (são bem menores que o Gemma), e abertos no celular só com o que o português usa. A extração recusa caminhos que saem da pasta da voz, no `core` (testado) e de novo no caminho resolvido pelo sistema.
 - **A voz do sistema continua como reserva**: sem voz neural baixada e escolhida, o Blico fala com o motor do Android, como antes.
 - **APK só com arm64-v8a.** O sherpa-onnx traz 120 MB de bibliotecas nativas para quatro arquiteturas; o S25 Ultra usa uma só.
+
+## 2026-10-17 — Visual "Painel" e abas
+
+André achou o app com cara de genérico e escolheu a direção "Painel" entre três propostas.
+
+- **Três abas: Início, Agentes e Ajustes** (`Shell.kt`). O Início virou o assistente: um bloco escuro para falar (o microfone só abre no toque, e fecha quando o app sai da frente), um campo para digitar, o próximo alarme do sistema, quantas ações o Blico fez hoje e a lista do que ele fez. A configuração que era a tela inicial foi para Ajustes. Agentes é a aba da conversa com agentes, que vem do pacote `app.blico.agents`.
+- **Tipografia:** Doto (matriz de pontos) só na marca, nos títulos das abas e nos números grandes; IBM Plex Sans no texto; IBM Plex Mono nos rótulos, nas opções e na lista de atividade. As três são OFL, cortadas para o alfabeto latino, em pesos fixos. A Inter saiu.
+- **Cores:** fundo cinza-pedra, cartões brancos como widgets, botão principal em tinta escura e o verde do logo só para o que está vivo (status, progresso, pronto). O app agora segue o modo escuro do sistema, com a mesma paleta em tons escuros.
+- **Atividade só no celular** (`ActivityLog`, testado no `core`): até 30 linhas com a frase que o Blico falou e a hora, só de ações concluídas, num arquivo de preferências do app (sem backup). Dá para limpar na própria lista.
+- Os componentes continuam em `app/ui/Theme.kt` com as mesmas assinaturas, mais `ScreenHeader`, `SectionLabel`, `DashedRule`, `LiveDot`, `DottedRing` e `BlicoAvatar` (cor tirada do nome, ou passada).
