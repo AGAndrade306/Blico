@@ -186,7 +186,11 @@ class BlicoApp : Application() {
      * Primeiro as regras (instantâneas); depois o Gemma no aparelho; só o que os dois não
      * resolvem vai para a nuvem, sempre mascarado, e só se ela estiver configurada e ligada.
      */
-    val assistant by lazy { Assistant(providers = listOf(RuleRouter(capabilities.rules())) + brains, registry = registry) }
+    val assistant by lazy { Assistant(
+            providers = listOf(RuleRouter(capabilities.rules())) + brains,
+            registry = registry,
+            toolsFor = capabilities::toolsFor,
+        ) }
 
     /** Agentes em arquivo. Rodam só com os modelos: as regras repetiriam o mesmo pedido a cada passo. */
     val agents by lazy { AgentStore(this) }

@@ -34,6 +34,8 @@ class SmsCapability(private val port: SmsPort) : Capability {
 
     override val permissions = listOf(Permission.SMS)
 
+    override val keywords = listOf("sms", "torpedo", "mensagem de texto")
+
     override val rules: List<SpeechRule> = listOf(
         // "manda um SMS pro João dizendo que eu chego às 8", "manda mensagem de texto pra mãe: tô chegando"
         SpeechRule("^(?:manda|mande|mandar|envia|envie|enviar|escreve|escreva)(?: um| uma)? (?:sms|torpedo|mensagem de texto|mensagem por sms){F} {PRO} (?<contato>.+?)(?:,? (?:dizendo|falando|avisando|perguntando)(?: que)?|,? que|:|,) (?<texto>.+)$") { m ->

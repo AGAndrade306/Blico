@@ -87,7 +87,7 @@ Seguindo as fases do próprio catálogo, um PR por item. O que outro thread já 
 | F1 útil | Memória (pronta) | Memória pessoal cifrada: "lembra que…", "o que você sabe sobre…", "esquece…", tela para ver e apagar, o Gemma lê |
 | F1 útil | Agenda e lembretes (prontos) | Agenda do aparelho (ver, criar com Confirmar, horários livres, conflitos) e lembretes com hora em notificação |
 | F1 útil | Mensagens | SMS com Confirmar (pronto) e "compartilhar para o Blico" (resumir, reescrever, traduzir, criar lembrete) |
-| F1 útil | Ferramentas por pedido | Seleção de ferramentas por relevância (3.4) |
+| F1 útil | Ferramentas por pedido (pronto) | Seleção de ferramentas por relevância (3.4) |
 | F2 celular | Notificações | Resumo, urgentes, golpe em link, abrir o app certo, tudo no aparelho |
 | F2 celular | Tela e câmera | Contexto da tela pelo papel de assistente e foto para o Gemma |
 | F2 celular | Mídia | Pausar, pular, voltar e volume na sessão ativa |

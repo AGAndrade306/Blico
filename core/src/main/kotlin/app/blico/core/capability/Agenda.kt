@@ -67,6 +67,11 @@ class AgendaCapability(private val calendar: CalendarPort, private val reminders
     override val rules: List<SpeechRule> = AgendaRules.all
 
     override val permissions = listOf(Permission.CALENDAR, Permission.NOTIFICATIONS)
+
+    override val keywords = listOf(
+        "agenda", "compromisso", "reuni", "evento", "marca", "livre", "horario", "lembr", "me avis", "amanha", "hoje",
+        "semana", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo", "dia ", " as ", "daqui", "hora", "minuto",
+    )
 }
 
 internal object AgendaText {

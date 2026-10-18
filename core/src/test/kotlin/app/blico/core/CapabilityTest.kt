@@ -109,6 +109,32 @@ class CapabilityTest {
     }
 
     @Test
+    fun `modelos so recebem as ferramentas das funcionalidades ligadas ao pedido`() = runTest {
+        val caps = Capabilities(allCapabilitiesForTest())
+        val all = builtinTools() + caps.tools()
+        fun names(text: String) = caps.toolsFor(text, all).map { it.name }.toSet()
+
+        val plain = names("avisa a Ana que vou atrasar")
+        assertTrue("whatsapp_preparar" in plain && "lanterna" !in plain && "agenda_dia" !in plain && "sms_preparar" !in plain)
+        assertTrue("lanterna" in names("tá escuro aqui, acende a lanterna"))
+        assertTrue("agenda_dia" in names("tenho algo marcado na sexta?"))
+        assertTrue("lembrete_criar" in names("não me deixa esquecer do remédio às 22h"))
+        assertTrue("sms_preparar" in names("manda um SMS pra Ana"))
+        assertTrue("memoria_guardar" in names("anota que a Ana é minha irmã"))
+
+        var seen: List<Tool> = emptyList()
+        val spy = object : LlmProvider {
+            override val id = "local"
+            override suspend fun chooseTools(request: LlmRequest): LlmDecision {
+                seen = request.tools
+                return LlmDecision(emptyList(), 0.0)
+            }
+        }
+        Assistant(listOf(spy), ToolRegistry(all), toolsFor = caps::toolsFor).handle("avisa a Ana que vou atrasar", ctx)
+        assertTrue(seen.none { it.name == "lanterna" } && seen.any { it.name == "whatsapp_preparar" })
+    }
+
+    @Test
     fun `nomes de ferramenta nao colidem com as de base`() {
         ToolRegistry(builtinTools() + Capabilities(allCapabilitiesForTest()).tools())
     }

@@ -281,3 +281,11 @@ Fase 1 do catálogo (itens 6 e 7).
 
 - **"manda um SMS pro João dizendo…"** acha o contato como o WhatsApp faz. Com a permissão de SMS dada em Ajustes › Funcionalidades, o próximo passo é enviar, que passa pelo cartão Confirmar com o número e o texto. Sem a permissão, abre o app de mensagens com o texto pronto.
 - **Só quando a pessoa diz SMS** (ou "mensagem de texto"): "manda mensagem pro João" continua indo para o WhatsApp.
+
+## 2026-10-18 — Ferramentas por pedido
+
+Com os pacotes, os modelos passariam de 20 para mais de 35 ferramentas, e o Gemma de 4B erra mais com prompt longo (o servidor também recusa acima de 64).
+
+- **Cada funcionalidade diz suas palavras-chave** (pedaços sem acento: "lanterna", "bateria", "agenda", "lembr", "sms"). Se nenhuma aparece no pedido, as ferramentas dela ficam fora do prompt daquele pedido. As ferramentas de base e as do Google e do MCP ficam sempre.
+- **Só no pedido direto**: os agentes continuam vendo as ferramentas que o perfil deles libera, e o benchmark mede com todas.
+- As regras não mudam: elas já entendem as frases comuns sem modelo.

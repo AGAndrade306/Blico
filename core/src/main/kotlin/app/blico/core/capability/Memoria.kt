@@ -80,6 +80,8 @@ class MemoriaCapability(private val store: MemoryStore) : Capability {
     override val title = "Memória"
     override val summary = "Lembra o que você pedir (pessoas, preferências, combinados), só no celular e cifrado"
 
+    override val keywords = listOf("lembr", "memoria", "esquec", "guard", "anot", "sabe", "salv", "grav")
+
     override val tools: List<Tool> = listOf(MemoriaGuardar(store), MemoriaConsultar(store), MemoriaEsquecer(store), MemoriaApagar(store))
 
     override val rules: List<SpeechRule> = listOf(
