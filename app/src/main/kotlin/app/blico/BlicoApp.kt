@@ -19,6 +19,10 @@ import app.blico.core.DirectActions
 import app.blico.core.ExecContext
 import app.blico.core.NeuralVoices
 import app.blico.core.OptionalProvider
+import app.blico.core.Ports
+import app.blico.core.capability.Capabilities
+import app.blico.core.capability.SistemaCapability
+import app.blico.core.capability.SystemPort
 import app.blico.core.Origin
 import app.blico.core.Outcome
 import app.blico.core.RedactingProvider
@@ -28,6 +32,7 @@ import app.blico.core.ToolRegistry
 import app.blico.core.tools.builtinTools
 import app.blico.core.tools.googleTools
 import app.blico.executor.AndroidDeviceGateway
+import app.blico.executor.AndroidSystemPort
 import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
 import app.blico.memory.AgentStore
@@ -141,13 +146,29 @@ class BlicoApp : Application() {
     /** A conta Google, quando a pessoa entra. A Agenda e o Gmail só aparecem aos modelos depois disso. */
     val google by lazy { GoogleLogin(this) }
 
-    val registry by lazy { ToolRegistry(builtinTools() + googleTools(google)) }
+    private val capabilityPrefs by lazy { getSharedPreferences("funcionalidades", MODE_PRIVATE) }
+
+    /**
+     * As funcionalidades em pacotes (sistema, e as que vierem: memória, agenda, notificações).
+     * Uma nova entra nesta lista; ferramentas, regras e a tela de Ajustes vêm dela.
+     */
+    val capabilities by lazy {
+        Capabilities(listOf(SistemaCapability())) { capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty() }
+    }
+
+    fun setCapabilityOn(id: String, on: Boolean) {
+        val off = capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty().toMutableSet()
+        if (on) off.remove(id) else off.add(id)
+        capabilityPrefs.edit().putStringSet("desligadas", off).apply()
+    }
+
+    val registry by lazy { ToolRegistry(builtinTools() + googleTools(google) + capabilities.tools()) }
 
     /**
      * Primeiro as regras (instantâneas); depois o Gemma no aparelho; só o que os dois não
      * resolvem vai para a nuvem, sempre mascarado, e só se ela estiver configurada e ligada.
      */
-    val assistant by lazy { Assistant(providers = listOf(RuleRouter()) + brains, registry = registry) }
+    val assistant by lazy { Assistant(providers = listOf(RuleRouter(capabilities.rules())) + brains, registry = registry) }
 
     /** Agentes em arquivo. Rodam só com os modelos: as regras repetiriam o mesmo pedido a cada passo. */
     val agents by lazy { AgentStore(this) }
@@ -216,5 +237,6 @@ class BlicoApp : Application() {
         files = files,
         direct = directActions(),
         knowledge = knowledge,
+        ports = Ports.None.with(SystemPort::class.java, AndroidSystemPort(this, launcher)),
     )
 }

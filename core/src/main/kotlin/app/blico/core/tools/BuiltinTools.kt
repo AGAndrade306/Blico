@@ -132,7 +132,7 @@ internal object WhatsAppEnviar : BaseTool(
         val nome = call.arg("contato")!!
         return when (val r = ctx.device.perform(DeviceAction.SendWhatsApp(phoneForWhatsApp(call.arg("telefone")!!), call.arg("texto")!!))) {
             DeviceResult.Done -> ToolResult.Success("Enviei para $nome.")
-            is DeviceResult.NotInstalled -> r.toToolResult("")
+            is DeviceResult.NotInstalled, is DeviceResult.NeedsPermission -> r.toToolResult("")
             // A conversa ficou aberta com o texto: sem o toque automático, falta só o seu.
             is DeviceResult.Failed -> ToolResult.Failure(r.reason, "Não consegui enviar sozinho. A mensagem para $nome ficou pronta, toque em enviar.")
         }

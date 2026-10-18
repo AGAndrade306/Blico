@@ -16,7 +16,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LocalTest {
-    private val tools = builtinTools().filter { it.exposedToModels }
+    private val tools = (builtinTools() + app.blico.core.capability.Capabilities(CapabilityTest.allCapabilitiesForTest()).tools()).filter { it.exposedToModels }
 
     @Test
     fun `ferramenta vira o json que o LiteRT-LM espera`() {

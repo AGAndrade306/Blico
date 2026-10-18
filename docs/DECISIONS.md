@@ -243,3 +243,15 @@ Achado da revisão: um agente lia um e-mail (`gmail_ler`, classe 0) e, a pedido 
 ## 2026-10-18 — Nada sai na cópia entre aparelhos
 
 - **`data_extraction_rules.xml` exclui todos os domínios** do backup na nuvem e da cópia de celular para celular. No Android 12+, `allowBackup="false"` desliga só o backup na nuvem; o Smart Switch levaria agentes, lugares, atividade e preferências para outro aparelho. Os segredos cifrados nem funcionariam lá (a chave do Keystore não viaja), mas o resto iria em claro.
+
+## 2026-10-18 — Funcionalidades em pacotes e o pacote Sistema
+
+André trouxe um catálogo de funcionalidades de um assistente líder de mercado e pediu que o Blico fosse estruturado para recebê-las sem quebrar. O mapa de lacunas e a ordem de entrega estão em `docs/FUNCIONALIDADES.md`.
+
+- **`Capability` no `core`**: cada área (sistema, memória, agenda, notificações) traz as próprias ferramentas, regras de fala, acessos e disponibilidade, em arquivo próprio. Antes, toda funcionalidade mexia em `builtinTools()`, na lista do `RuleRouter` e no `when` do `AndroidDeviceGateway`, e dois threads colidiam.
+- **Portas por pedido em `ExecContext.ports`**: o que é do Android fica atrás de uma interface, buscada por tipo. Assim a porta usa quem abre as telas naquele pedido (o botão lateral ou o app), e uma porta nova não muda o construtor do `ExecContext`.
+- **Regras das funcionalidades antes das de base**, com teste de regressão sobre todas as frases do `RuleRouterTest` e os 100 comandos do benchmark: nenhuma muda de destino. "abre as configurações" é a única que muda de propósito (vai para `abrir_ajuste`), e o benchmark foi ajustado.
+- **Desligar cada funcionalidade** em Ajustes › Funcionalidades (item 21 e 22 do catálogo). Desligada, as ferramentas somem dos modelos e a frase dita responde que está desligada.
+- **`DeviceResult.NeedsPermission`**: falta de acesso vira fala com o nome do acesso e o porquê, e a tela oferece "Liberar".
+- **Pacote Sistema**: bateria, armazenamento e conexão (com sugestão quando algo está ruim), lanterna, volume (mídia, toque, alarme), modo de som (normal, vibrar, silencioso, Não perturbe), brilho e 24 telas de Configurações. Wi-Fi, Bluetooth, NFC e modo avião o Android 10+ não deixa um app ligar: o Blico abre o painel (por cima do app atual quando existe) e diz isso. Silencioso e Não perturbe pedem o acesso especial ao Não perturbe; brilho pede "modificar configurações do sistema". Nenhuma permissão perigosa nova.
+- **Riscos**: ler estado é classe 0; lanterna, volume, som e brilho são classe 1 (mudam o aparelho, se desfazem com outra frase), como alarme e timer.

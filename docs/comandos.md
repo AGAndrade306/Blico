@@ -19,6 +19,12 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "pesquisa carros elétricos", "receita de pão de queijo" | Pesquisa ampla: abre o DuckDuckGo e deixa no card um resumo raso ou por onde começar. |
 | "abre a câmera" | Abre qualquer app pelo nome. |
 | "acha o pdf do contrato", "fotos de ontem", "cadê a planilha de gastos", "procura o arquivo relatório desta semana" | Lista os arquivos no cartão. Toque num item para abrir, compartilhar ou renomear. Renomear pede um toque em Confirmar. |
+| "liga a lanterna", "apaga a lanterna" | Liga e desliga a lanterna. |
+| "aumenta o volume", "volume em 30", "volume do toque no máximo", "muta o som" | Muda o volume da mídia, do toque ou do alarme e diz onde ficou. |
+| "põe no silencioso", "deixa no vibrar", "liga o não perturbe", "tira do silencioso" | Muda o modo de som. Silencioso e Não perturbe pedem o acesso ao Não perturbe (Ajustes › Funcionalidades). |
+| "aumenta o brilho", "brilho em 40", "brilho automático" | Muda o brilho. Pede "modificar configurações do sistema" na primeira vez. |
+| "quanto de bateria tem", "quanto espaço livre eu tenho", "a internet caiu" | Responde no card e sugere o que fazer quando algo está ruim (bateria baixa, memória cheia, Wi-Fi sem internet). |
+| "liga o wi-fi", "desativa o bluetooth", "abre as configurações de bateria" | O Android não deixa apps ligarem Wi-Fi, Bluetooth, NFC ou modo avião: o Blico abre o painel ou a tela certa e você toca. |
 
 O que não está na lista vai para o cérebro do celular (Gemma 4, baixado uma vez em Ajustes › Personalizar). Ele entende os mesmos pedidos ditos de outro jeito ("avisa a Ana que vou me atrasar", "tô com fome, quero um hambúrguer") e responde perguntas de conhecimento geral, tudo sem internet.
 
