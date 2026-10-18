@@ -198,3 +198,14 @@ André pediu que pergunta pontual seja respondida no card, sem mandar para o nav
 - **Privacidade**: a consulta só vai para o DuckDuckGo se o `Redactor` não achar nada pessoal nela (nome da agenda, endereço cadastrado, telefone, e-mail). O trecho que volta entra no prompt por `UntrustedContent.wrap`. A nuvem não entra nesse caminho.
 - **Pergunta que ninguém entendeu** (o Gemma disse que não sabe e a nuvem está desligada ou não decidiu): se parece pergunta, vira busca em vez de "Ainda não sei fazer isso".
 - **Card de resposta**: o que a pessoa disse fica pequeno em cima, a resposta é o destaque (rolável quando é longa), com a fonte em mono, "Copiar" e o caminho para o navegador. As métricas do microfone desceram para o rodapé. O tema (pontos ou ASCII) é assunto de outra etapa e não muda aqui.
+
+## 2026-10-18 — Mascaramento de documentos, cartão, CEP e PIX
+
+A revisão de privacidade (`plano/revisao-e-plano.md`, pasta do projeto) achou que o `Redactor` só conhecia contatos, endereços, telefones e e-mails.
+
+- **Novos apelidos:** `cpf_N`, `cnpj_N`, `cartao_N`, `cep_N` e `chave_pix_N`, na mesma passada dos outros, e restaurados na volta.
+- **Ordem do mais específico ao mais genérico** (chave PIX, e-mail, CNPJ, CPF, cartão, CEP, telefone), para um CPF ou cartão nunca virar "telefone" pela metade.
+- **Sem pontuação, só com dígito verificador.** CPF e CNPJ com pontuação são sempre mascarados; 11 ou 14 dígitos seguidos só quando o verificador confere, e cartão só quando passa no Luhn. Assim um número de pedido ou protocolo não some do texto.
+- **CEP só com hífen:** oito dígitos seguidos se confundem com telefone e número de pedido.
+- **Chave PIX aleatória é um UUID**; e-mail e telefone como chave PIX já eram mascarados.
+- Como o `WebAnswers` só manda ao DuckDuckGo consultas em que o `Redactor` não acha nada, consultas com esses dados também deixam de sair.

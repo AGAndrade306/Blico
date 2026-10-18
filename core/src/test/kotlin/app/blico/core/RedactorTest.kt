@@ -49,4 +49,37 @@ class RedactorTest {
         val r = redactor.redact(input)
         assertEquals(input, redactor.restore(r.text, r.mapping))
     }
+
+    @Test
+    fun `mascara documentos, cartao, cep e chave pix`() {
+        val input = "Meu CPF é 529.982.247-25, o CNPJ da firma 11.222.333/0001-81, " +
+            "cartão 4111 1111 1111 1111, CEP 01310-100 e a chave 123e4567-e89b-42d3-a456-426614174000."
+        val r = redactor.redact(input)
+        assertEquals(
+            "Meu CPF é cpf_1, o CNPJ da firma cnpj_1, cartão cartao_1, CEP cep_1 e a chave chave_pix_1.",
+            r.text,
+        )
+        assertEquals(input, redactor.restore(r.text, r.mapping))
+    }
+
+    @Test
+    fun `documentos sem pontuacao so com digito verificador valido`() {
+        assertEquals("cpf_1 e cnpj_1", redactor.redact("52998224725 e 11222333000181").text)
+        // Mesmo tamanho, dígito errado: é só um número (um pedido, um protocolo).
+        assertEquals("pedido 12345678900", redactor.redact("pedido 12345678900").text)
+        assertEquals("cartão 4111111111111112", redactor.redact("cartão 4111111111111112").text)
+    }
+
+    @Test
+    fun `numeros comuns ficam como estao`() {
+        listOf("alarme às 06:30", "timer de 25 minutos", "reunião em 2026", "nota 9.5").forEach {
+            assertEquals(it, redactor.redact(it).text)
+        }
+    }
+
+    @Test
+    fun `telefone continua telefone ao lado dos documentos`() {
+        val r = redactor.redact("CPF 529.982.247-25, fone (11) 98765-4321")
+        assertEquals("CPF cpf_1, fone telefone_1", r.text)
+    }
 }
