@@ -218,3 +218,28 @@ André aprovou a direção "Calma luminosa" (thread "Revisão e plano do Blico")
 - **Sem desfoque da tela de trás**: o Android só desfoca a janela inteira, e isso esconderia o app que o André quer ver por trás do card. O card ficou 92% opaco, com borda fina, e o véu escuro caiu de 25% para 8%.
 - **Confirmar à prova de sobreposição** (P0-5, combinado com o thread de revisão): o botão recusa o toque quando outra janela cobre o Blico, mesmo em parte, e explica por quê; a janela do botão lateral ignora toques quando está toda coberta; enquanto o cartão está aberto, a janela fica fora de capturas de tela (`FLAG_SECURE`), no botão lateral e no app.
 - **Passos do agente como recibo**: cada ferramenta usada vira uma linha `agenda_ver ........ ok` em mono, e a que espera o Confirmar fica em laranja com "seu toque". A sua mensagem na conversa passou do verde para a tinta.
+
+## 2026-10-18 — Mascaramento de documentos, cartão, CEP e PIX
+
+A revisão de privacidade (`plano/revisao-e-plano.md`, pasta do projeto) achou que o `Redactor` só conhecia contatos, endereços, telefones e e-mails.
+
+- **Novos apelidos:** `cpf_N`, `cnpj_N`, `cartao_N`, `cep_N` e `chave_pix_N`, na mesma passada dos outros, e restaurados na volta.
+- **Ordem do mais específico ao mais genérico** (chave PIX, e-mail, CNPJ, CPF, cartão, CEP, telefone), para um CPF ou cartão nunca virar "telefone" pela metade.
+- **Sem pontuação, só com dígito verificador.** CPF e CNPJ com pontuação são sempre mascarados; 11 ou 14 dígitos seguidos só quando o verificador confere, e cartão só quando passa no Luhn. Assim um número de pedido ou protocolo não some do texto.
+- **CEP só com hífen:** oito dígitos seguidos se confundem com telefone e número de pedido.
+- **Chave PIX aleatória é um UUID**; e-mail e telefone como chave PIX já eram mascarados.
+- Como o `WebAnswers` só manda ao DuckDuckGo consultas em que o `Redactor` não acha nada, consultas com esses dados também deixam de sair.
+
+## 2026-10-18 — Dado pessoal lido por um agente não sai sem o Confirmar
+
+Achado da revisão: um agente lia um e-mail (`gmail_ler`, classe 0) e, a pedido do próprio texto do e-mail, chamava `buscar_web` ou uma ferramenta MCP marcada como leitura, que executavam direto e mandavam o argumento para o DuckDuckGo ou para o servidor do serviço. O `Redactor` não pega códigos nem textos inteiros.
+
+- **Duas marcas novas em `Tool`:** `egress` (manda os argumentos a um terceiro fora do aparelho e fora das contas da pessoa: `buscar_web`, `abrir_pesquisa`, toda ferramenta MCP) e `readsPrivate` (devolve dado pessoal: `agenda_ver`, `gmail_ler`, `buscar_arquivos`, toda ferramenta MCP).
+- **O agente fica marcado** (`AgentRun.privateData`) a partir do primeiro resultado de uma ferramenta `readsPrivate`, ou quando um membro da equipe que leu dado pessoal responde. Na conversa em grupo, a marca passa aos agentes seguintes, porque o que o primeiro disse vai no contexto deles.
+- **Marcado, toda ferramenta de saída para no Confirmar**, mesmo sendo leitura, com os argumentos à vista no cartão (texto da chamada, regra 2). Sem marca, nada muda: a pesquisa de um agente de pesquisa segue direta.
+- **Agenda e Gmail não são saída**: falam com a conta da própria pessoa, e o que escrevem já é classe 2.
+- **Pedido direto, fora de agente, não muda**: ali o argumento vem da fala da pessoa, não de algo lido.
+
+## 2026-10-18 — Nada sai na cópia entre aparelhos
+
+- **`data_extraction_rules.xml` exclui todos os domínios** do backup na nuvem e da cópia de celular para celular. No Android 12+, `allowBackup="false"` desliga só o backup na nuvem; o Smart Switch levaria agentes, lugares, atividade e preferências para outro aparelho. Os segredos cifrados nem funcionariam lá (a chave do Keystore não viaja), mas o resto iria em claro.

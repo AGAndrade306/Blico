@@ -74,9 +74,15 @@ class Assistant(
     /** Ferramentas que os modelos podem escolher. */
     fun modelTools(): List<Tool> = registry.all.filter { it.exposedToModels }
 
-    /** Executa uma chamada já decidida: depois de uma escolha ou do toque em Confirmar ([confirmed]). */
-    suspend fun execute(call: ToolCall, ctx: ExecContext, confirmed: Boolean = false): Outcome =
-        when (val decision = policy.decide(call)) {
+    /** Se o resultado de [tool] traz dado pessoal. */
+    fun readsPrivate(tool: String): Boolean = registry[tool]?.readsPrivate == true
+
+    /**
+     * Executa uma chamada já decidida: depois de uma escolha ou do toque em Confirmar ([confirmed]).
+     * [privateData]: o pedido já leva dado pessoal lido por uma ferramenta (ver [RiskPolicy.decide]).
+     */
+    suspend fun execute(call: ToolCall, ctx: ExecContext, confirmed: Boolean = false, privateData: Boolean = false): Outcome =
+        when (val decision = policy.decide(call, privateData)) {
             is Decision.Refuse -> Outcome.Failed("Não posso fazer isso", decision.reason)
             is Decision.Confirm -> if (confirmed) run(call, ctx) else Outcome.Confirm(decision.summary.title + "?", decision.summary, call)
             Decision.Execute -> run(call, ctx)

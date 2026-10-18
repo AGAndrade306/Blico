@@ -34,6 +34,8 @@ data class GroupRun(
     val transcript: List<GroupMessage>,
     val hops: Int = 0,
     val paused: AgentRun? = null,
+    /** Algum agente desta conversa leu dado pessoal, e o que ele disse está no contexto dos próximos. */
+    val privateData: Boolean = false,
 )
 
 data class GroupResult(val transcript: List<GroupMessage>, val outcome: Outcome?, val paused: GroupRun? = null)
@@ -67,7 +69,7 @@ class GroupRunner(private val runner: AgentRunner) {
     ): GroupResult {
         val paused = run.paused ?: return GroupResult(run.transcript, null)
         val result = runner.resume(paused, call, ctx, confirmed, onEvent)
-        return after(run.copy(paused = null), paused.agent.name, result, members, ctx, onEvent)
+        return after(run.copy(paused = null, privateData = run.privateData || result.privateData), paused.agent.name, result, members, ctx, onEvent)
     }
 
     private suspend fun drain(run: GroupRun, members: List<AgentProfile>, ctx: ExecContext, onEvent: (AgentEvent) -> Unit): GroupResult {
@@ -77,7 +79,8 @@ class GroupRunner(private val runner: AgentRunner) {
             val (name, text) = current.queue.first()
             current = current.copy(queue = current.queue.drop(1))
             val agent = members.firstOrNull { it.name == name } ?: continue
-            val result = runner.start(text, agent, ctx, context(current.transcript), onEvent)
+            val result = runner.start(text, agent, ctx, context(current.transcript), current.privateData, onEvent)
+            current = current.copy(privateData = current.privateData || result.privateData)
             if (result.paused != null) return GroupResult(current.transcript, result.outcome, current.copy(paused = result.paused))
             current = handoff(current, name, result.outcome, members)
             last = result.outcome

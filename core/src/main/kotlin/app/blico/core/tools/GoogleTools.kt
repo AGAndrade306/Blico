@@ -55,6 +55,9 @@ private abstract class GoogleTool(
 ) : BaseTool(name, description, risk, emptySet(), params, required, title) {
     override val exposedToModels: Boolean get() = account.connected
 
+    // Ver a agenda e ler e-mails trazem dado pessoal para o laço do agente.
+    override val readsPrivate: Boolean get() = risk == RiskClass.READ
+
     override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
         if (!account.connected) return ToolResult.Failure("google desconectado", "Entre na sua conta Google nos Agentes primeiro")
         return try {

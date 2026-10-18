@@ -205,6 +205,10 @@ class McpTool(
 
     override val apps: Set<String> = emptySet()
 
+    // Os argumentos vão para o servidor do serviço, e o que volta pode ser dado pessoal (páginas, tarefas).
+    override val egress = true
+    override val readsPrivate = true
+
     override fun summarize(call: ToolCall) = ConfirmationSummary(
         title = "$service: ${clean(remote.title ?: remote.name).take(MAX_PARAM)}",
         fields = parameters.properties.keys.mapNotNull { k -> call.args[k]?.let { k to it } },

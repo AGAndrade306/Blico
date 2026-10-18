@@ -87,6 +87,15 @@ interface Tool {
     val exposedToModels: Boolean get() = true
 
     /**
+     * Manda os argumentos a um terceiro, fora do aparelho e fora das contas da pessoa
+     * (DuckDuckGo, um serviço MCP). Depois que um agente leu dado pessoal, passa pelo Confirmar.
+     */
+    val egress: Boolean get() = false
+
+    /** Devolve dado pessoal (e-mails, agenda, nomes de arquivo, páginas de um serviço). */
+    val readsPrivate: Boolean get() = false
+
+    /**
      * Resumo do cartão de confirmação, gerado a partir da chamada estruturada.
      * Nunca usa texto livre do modelo.
      */

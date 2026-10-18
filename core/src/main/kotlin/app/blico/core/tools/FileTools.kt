@@ -26,6 +26,8 @@ internal object BuscarArquivos : BaseTool(
     ),
     title = "Buscar arquivos",
 ) {
+    override val readsPrivate = true
+
     override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
         if (!ctx.files.hasAccess()) return ToolResult.Failure("sem acesso a arquivos", SEM_ACESSO)
         val kind = call.arg("tipo")?.let { FileKind.fromWord(it) ?: FileKind.entries.firstOrNull { k -> k.name.equals(FileSearch.simplify(it), true) } }
