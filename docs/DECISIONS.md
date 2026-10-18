@@ -219,3 +219,7 @@ Achado da revisão: um agente lia um e-mail (`gmail_ler`, classe 0) e, a pedido 
 - **Marcado, toda ferramenta de saída para no Confirmar**, mesmo sendo leitura, com os argumentos à vista no cartão (texto da chamada, regra 2). Sem marca, nada muda: a pesquisa de um agente de pesquisa segue direta.
 - **Agenda e Gmail não são saída**: falam com a conta da própria pessoa, e o que escrevem já é classe 2.
 - **Pedido direto, fora de agente, não muda**: ali o argumento vem da fala da pessoa, não de algo lido.
+
+## 2026-10-18 — Nada sai na cópia entre aparelhos
+
+- **`data_extraction_rules.xml` exclui todos os domínios** do backup na nuvem e da cópia de celular para celular. No Android 12+, `allowBackup="false"` desliga só o backup na nuvem; o Smart Switch levaria agentes, lugares, atividade e preferências para outro aparelho. Os segredos cifrados nem funcionariam lá (a chave do Keystore não viaja), mas o resto iria em claro.
