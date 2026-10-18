@@ -255,3 +255,37 @@ André trouxe um catálogo de funcionalidades de um assistente líder de mercado
 - **`DeviceResult.NeedsPermission`**: falta de acesso vira fala com o nome do acesso e o porquê, e a tela oferece "Liberar".
 - **Pacote Sistema**: bateria, armazenamento e conexão (com sugestão quando algo está ruim), lanterna, volume (mídia, toque, alarme), modo de som (normal, vibrar, silencioso, Não perturbe), brilho e 24 telas de Configurações. Wi-Fi, Bluetooth, NFC e modo avião o Android 10+ não deixa um app ligar: o Blico abre o painel (por cima do app atual quando existe) e diz isso. Silencioso e Não perturbe pedem o acesso especial ao Não perturbe; brilho pede "modificar configurações do sistema". Nenhuma permissão perigosa nova.
 - **Riscos**: ler estado é classe 0; lanterna, volume, som e brilho são classe 1 (mudam o aparelho, se desfazem com outra frase), como alarme e timer.
+
+## 2026-10-18 — Memória pessoal
+
+Fase 1 do catálogo (item 4) e P1-4 do plano de revisão.
+
+- **Por voz**: "lembra que…" guarda, "o que você sabe sobre…" consulta, "esquece que…" apaga. "Me lembra de…" fica livre para os lembretes com hora.
+- **Guardar e esquecer passam pelo Confirmar** com o texto exato do fato. Assim nada entra na memória sem a pessoa ver, nem um fato plantado por um e-mail que um agente leu. Esquecer acha o fato primeiro e, com vários parecidos, pergunta qual.
+- **Sensível é marcado**: documentos, telefones e e-mails (pelo `Redactor`) e assuntos como senha, saúde, dinheiro e crença. O cartão avisa antes de guardar.
+- **Cifrada no aparelho** (`EncryptedMemoryStore`): AES-GCM com chave própria no Keystore, num arquivo do app que já fica fora de backup e de cópia entre aparelhos. Se a chave se perder (app reinstalado), a memória começa vazia em vez de quebrar.
+- **Só o Gemma do celular lê**: `MemoryAwareProvider` leva até três fatos ligados ao pedido como contexto, para "manda pra minha irmã" achar a Ana. A nuvem nunca recebe a memória. Consultar marca o pedido como dado pessoal, então uma ferramenta de saída depois disso para no Confirmar.
+- **O contexto agora chega ao Gemma**: `LocalBrain.userMessage` passou a incluir `LlmRequest.context`, que antes só a nuvem lia. A conversa em grupo também se beneficia.
+- **Tela em Ajustes** para ver, acrescentar e apagar fatos, um por um ou todos. Ali quem digita ou toca é a própria pessoa, então vale direto.
+
+## 2026-10-18 — Agenda do celular e lembretes com hora
+
+Fase 1 do catálogo (itens 6 e 7).
+
+- **Agenda pelo CalendarContract**, sem login: as contas sincronizadas no aparelho (Google, Samsung, Outlook) já aparecem ali. Ver o dia ou a semana, horários livres entre 8h e 20h e conflitos são classe 0 e marcam o pedido como dado pessoal. Criar compromisso é classe 2: o cartão mostra título, quando, duração e local, e a resposta avisa se bate com outro. As ferramentas do Google continuam para quem entrou na conta.
+- **Lembretes com hora pelo AlarmManager**, avisados por notificação. "Me lembra…" com hora ou prazo vira lembrete; sem hora, fica para o modelo. A lista fica nas preferências do app para listar, cancelar e remarcar depois de reiniciar o celular. `USE_EXACT_ALARM` porque o Blico não vai para a Play Store e lembrete é uma das funções dele; sem ele, o aviso chega perto da hora.
+- **`PtWhen` no `core`**: "amanhã às 9", "daqui a 20 minutos", "sexta às 15h", "dia 25 ao meio-dia", "hoje à noite". As regras separam o quando do resto sem relógio, e a ferramenta resolve com o relógio do pedido. Hora sem dia que já passou de manhã vira a mesma hora da tarde ("às 3", às 10h, é 15h); com "da manhã" ou 13h em diante, vai para amanhã.
+- **Permissões** (agenda e notificações) aparecem em Ajustes › Funcionalidades com o porquê; negadas de vez, o botão abre os dados do app.
+
+## 2026-10-18 — SMS com Confirmar
+
+- **"manda um SMS pro João dizendo…"** acha o contato como o WhatsApp faz. Com a permissão de SMS dada em Ajustes › Funcionalidades, o próximo passo é enviar, que passa pelo cartão Confirmar com o número e o texto. Sem a permissão, abre o app de mensagens com o texto pronto.
+- **Só quando a pessoa diz SMS** (ou "mensagem de texto"): "manda mensagem pro João" continua indo para o WhatsApp.
+
+## 2026-10-18 — Ferramentas por pedido
+
+Com os pacotes, os modelos passariam de 20 para mais de 35 ferramentas, e o Gemma de 4B erra mais com prompt longo (o servidor também recusa acima de 64).
+
+- **Cada funcionalidade diz suas palavras-chave** (pedaços sem acento: "lanterna", "bateria", "agenda", "lembr", "sms"). Se nenhuma aparece no pedido, as ferramentas dela ficam fora do prompt daquele pedido. As ferramentas de base e as do Google e do MCP ficam sempre.
+- **Só no pedido direto**: os agentes continuam vendo as ferramentas que o perfil deles libera, e o benchmark mede com todas.
+- As regras não mudam: elas já entendem as frases comuns sem modelo.

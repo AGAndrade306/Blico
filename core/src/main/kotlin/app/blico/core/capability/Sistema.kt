@@ -126,6 +126,12 @@ class SistemaCapability : Capability {
     override val rules: List<SpeechRule> = SistemaRules.all
 
     override val permissions = listOf(Permission.DO_NOT_DISTURB, Permission.WRITE_SETTINGS)
+
+    override val keywords = listOf(
+        "lanterna", "volume", "som", "silenci", "vibr", "perturb", "mudo", "muta", "brilho", "tela", "bateria", "carga",
+        "carregando", "espaco", "armazenamento", "memoria", "internet", "wifi", "wi-fi", "wi fi", "bluetooth", "nfc",
+        "aviao", "dados", "rede", "conect", "configura", "ajuste", "gps", "localiza", "roteador", "hotspot", "celular",
+    )
 }
 
 internal object EstadoCelular : BaseTool(

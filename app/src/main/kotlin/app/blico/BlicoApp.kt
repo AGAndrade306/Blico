@@ -20,8 +20,12 @@ import app.blico.core.ExecContext
 import app.blico.core.NeuralVoices
 import app.blico.core.OptionalProvider
 import app.blico.core.Ports
+import app.blico.core.capability.AgendaCapability
 import app.blico.core.capability.Capabilities
+import app.blico.core.capability.MemoriaCapability
+import app.blico.core.capability.MemoryAwareProvider
 import app.blico.core.capability.SistemaCapability
+import app.blico.core.capability.SmsCapability
 import app.blico.core.capability.SystemPort
 import app.blico.core.Origin
 import app.blico.core.Outcome
@@ -31,12 +35,16 @@ import app.blico.core.SpeechOutput
 import app.blico.core.ToolRegistry
 import app.blico.core.tools.builtinTools
 import app.blico.core.tools.googleTools
+import app.blico.executor.AndroidCalendarPort
 import app.blico.executor.AndroidDeviceGateway
+import app.blico.executor.AndroidReminders
+import app.blico.executor.AndroidSms
 import app.blico.executor.AndroidSystemPort
 import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
 import app.blico.memory.AgentStore
 import app.blico.memory.AndroidContactDirectory
+import app.blico.memory.EncryptedMemoryStore
 import app.blico.memory.PrefsPlaceBook
 import app.blico.memory.SecretStore
 import app.blico.voice.AndroidSpeechOutput
@@ -119,10 +127,13 @@ class BlicoApp : Application() {
     val models by lazy { ModelStore(this) }
     val local by lazy { LiteRtLocalProvider({ models.selectedFile() }, File(cacheDir, "litertlm")) }
 
-    /** O Gemma no aparelho e, se configurada e ligada, a nuvem, sempre mascarada. */
+    /** Memória pessoal, cifrada no aparelho. Só o Gemma do celular lê; a nuvem nunca. */
+    val memory by lazy { EncryptedMemoryStore(this) }
+
+    /** O Gemma no aparelho (com os fatos da memória ligados ao pedido) e, se configurada e ligada, a nuvem, sempre mascarada. */
     private val brains by lazy {
         listOf(
-            OptionalProvider(local) { local.isReady() },
+            OptionalProvider(MemoryAwareProvider(local, memory) { capabilities.isOn("memoria") }) { local.isReady() },
             OptionalProvider(
                 RedactingProvider(CloudProvider(transport::post)) {
                     RedactingProvider.entitiesFrom(contacts.names(), places.all())
@@ -153,7 +164,14 @@ class BlicoApp : Application() {
      * Uma nova entra nesta lista; ferramentas, regras e a tela de Ajustes vêm dela.
      */
     val capabilities by lazy {
-        Capabilities(listOf(SistemaCapability())) { capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty() }
+        Capabilities(
+            listOf(
+                SistemaCapability(),
+                MemoriaCapability(memory),
+                AgendaCapability(AndroidCalendarPort(this), AndroidReminders(this)),
+                SmsCapability(AndroidSms(this)),
+            ),
+        ) { capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty() }
     }
 
     fun setCapabilityOn(id: String, on: Boolean) {
@@ -168,7 +186,11 @@ class BlicoApp : Application() {
      * Primeiro as regras (instantâneas); depois o Gemma no aparelho; só o que os dois não
      * resolvem vai para a nuvem, sempre mascarado, e só se ela estiver configurada e ligada.
      */
-    val assistant by lazy { Assistant(providers = listOf(RuleRouter(capabilities.rules())) + brains, registry = registry) }
+    val assistant by lazy { Assistant(
+            providers = listOf(RuleRouter(capabilities.rules())) + brains,
+            registry = registry,
+            toolsFor = capabilities::toolsFor,
+        ) }
 
     /** Agentes em arquivo. Rodam só com os modelos: as regras repetiriam o mesmo pedido a cada passo. */
     val agents by lazy { AgentStore(this) }

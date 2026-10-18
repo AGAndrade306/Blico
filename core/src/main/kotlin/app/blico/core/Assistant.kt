@@ -41,10 +41,12 @@ class Assistant(
     private val registry: ToolRegistry,
     private val policy: RiskPolicy = RiskPolicy(registry),
     private val minConfidence: Double = 0.6,
+    /** Escolhe as ferramentas que vão no prompt para um pedido (ver [app.blico.core.capability.Capabilities.toolsFor]). */
+    private val toolsFor: (String, List<Tool>) -> List<Tool> = { _, tools -> tools },
 ) {
     /** [onRoute] recebe o id do provedor que decidiu: regras, local ou nuvem. */
     suspend fun handle(text: String, ctx: ExecContext, onRoute: (String) -> Unit = {}): Outcome {
-        val request = LlmRequest(text, modelTools())
+        val request = LlmRequest(text, toolsFor(text, modelTools()))
         var failure: Throwable? = null
         for (provider in providers) {
             val decision = try {

@@ -99,6 +99,11 @@ class SistemaTest {
         assertCall("Blico, acende a lanterna por favor", "lanterna", "estado" to "ligar")
         assertCall("apaga a lanterna", "lanterna", "estado" to "desligar")
         assertCall("desliga lanterna", "lanterna", "estado" to "desligar")
+        // Dita no aparelho: antes caía na ligação para um contato chamado "lanterna do celular".
+        assertCall("ligue a lanterna do celular", "lanterna", "estado" to "ligar")
+        assertCall("Liga a lanterna do telefone pra mim", "lanterna", "estado" to "ligar")
+        assertCall("acende o flash", "lanterna", "estado" to "ligar")
+        assertCall("apague a lanterna do celular", "lanterna", "estado" to "desligar")
     }
 
     @Test
@@ -112,6 +117,7 @@ class SistemaTest {
         assertCall("abre as configurações", "abrir_ajuste", "tela" to "configuracoes")
         assertCall("vai nas configurações do Bluetooth", "abrir_ajuste", "tela" to "Bluetooth")
         assertCall("abre a economia de bateria", "abrir_ajuste", "tela" to "economia de bateria")
+        assertCall("liga o bluetooth do celular", "abrir_ajuste", "tela" to "bluetooth", "acao" to "ligar")
     }
 
     @Test
@@ -123,6 +129,7 @@ class SistemaTest {
         assertCall("coloca o volume em 30%", "volume", "acao" to "30")
         assertCall("volume do alarme pra 80 por cento", "volume", "acao" to "80", "fluxo" to "alarme")
         assertCall("muta o som", "volume", "acao" to "mudo")
+        assertCall("aumenta o volume do celular", "volume", "acao" to "aumentar")
     }
 
     @Test
@@ -141,6 +148,7 @@ class SistemaTest {
     fun `brilho`() {
         assertCall("aumenta o brilho", "brilho", "acao" to "aumentar")
         assertCall("diminui o brilho da tela", "brilho", "acao" to "diminuir")
+        assertCall("abaixa o brilho do celular", "brilho", "acao" to "diminuir")
         assertCall("brilho no máximo", "brilho", "acao" to "máximo")
         assertCall("deixa o brilho em 40", "brilho", "acao" to "40")
         assertCall("brilho automático", "brilho", "acao" to "automatico")

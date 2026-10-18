@@ -1,9 +1,11 @@
 package app.blico
 
+import android.Manifest
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,7 +46,12 @@ fun CapabilitiesCard(app: BlicoApp, tick: Int) {
     val p = LocalBlico.current
     // Acessos especiais não são observáveis: [tick] muda ao voltar das Configurações.
     var local by remember { mutableIntStateOf(0) }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { local++ }
+    var asked by remember { mutableStateOf<Permission?>(null) }
+    // Negada de vez, o Android nem mostra o diálogo: abre os dados do app para liberar por lá.
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        local++
+        if (result.values.any { !it }) asked?.let { AndroidPermissions.openSettings(context, it) }
+    }
 
     BlicoCard(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text("Funcionalidades", style = MaterialTheme.typography.titleMedium)
@@ -80,7 +88,10 @@ fun CapabilitiesCard(app: BlicoApp, tick: Int) {
                     )
                     BlicoButton("Liberar", primary = false, onClick = {
                         val runtime = AndroidPermissions.runtime(permission)
-                        if (runtime.isNotEmpty()) ask.launch(runtime.toTypedArray()) else AndroidPermissions.openSettings(context, permission)
+                        if (runtime.isNotEmpty()) {
+                            asked = permission
+                            ask.launch(runtime.toTypedArray())
+                        } else AndroidPermissions.openSettings(context, permission)
                     }, modifier = Modifier.padding(top = 4.dp))
                 }
             }
@@ -93,11 +104,16 @@ object AndroidPermissions {
     /** Permissões pedidas em diálogo. Vazia quando o acesso é especial, dado numa tela do sistema. */
     fun runtime(p: Permission): List<String> = when (p) {
         Permission.DO_NOT_DISTURB, Permission.WRITE_SETTINGS -> emptyList()
+        Permission.CALENDAR -> listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+        Permission.NOTIFICATIONS -> listOf(Manifest.permission.POST_NOTIFICATIONS)
+        Permission.SMS -> listOf(Manifest.permission.SEND_SMS)
     }
 
     fun granted(context: Context, p: Permission): Boolean = when (p) {
         Permission.DO_NOT_DISTURB -> context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
         Permission.WRITE_SETTINGS -> Settings.System.canWrite(context)
+        Permission.CALENDAR, Permission.NOTIFICATIONS, Permission.SMS ->
+            runtime(p).all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
     }
 
     /** Abre a tela onde a pessoa libera um acesso especial, já no Blico quando o Android deixa. */
@@ -106,6 +122,7 @@ object AndroidPermissions {
         val intents = when (p) {
             Permission.DO_NOT_DISTURB -> listOf(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
             Permission.WRITE_SETTINGS -> listOf(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, pkg))
+            Permission.CALENDAR, Permission.NOTIFICATIONS, Permission.SMS -> emptyList()
         } + Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
         for (intent in intents) {
             try {

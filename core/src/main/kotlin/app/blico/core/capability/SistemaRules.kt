@@ -11,6 +11,11 @@ internal object SistemaRules {
     private const val SET = "(?:coloca|coloque|põe|poe|bota|deixa|deixe|muda|mude|ajusta|ajuste)"
     private const val PHONE = "(?: (?:o )?(?:celular|telefone|aparelho))?"
 
+    /** "do celular" no fim: "liga a lanterna do celular", "aumenta o volume do telefone". */
+    private const val OF_PHONE = "(?: (?:do|no|deste|desse|neste|nesse) (?:celular|telefone|aparelho))?"
+
+    private const val TORCH = "(?:a |o )?(?:lanterna|luz da câmera|luz da camera|flash)"
+
     /** Wi-Fi e afins, que o Android só deixa a pessoa ligar: abre o painel ou a tela. */
     private const val RADIOS = "wi-?fi|wi fi|bluetooth|nfc|modo avião|modo aviao|dados móveis|dados moveis|dados|localização|localizacao|gps|roteador|hotspot"
 
@@ -21,12 +26,12 @@ internal object SistemaRules {
     private fun level(m: app.blico.core.RuleRouter.Match): String? = m.lower("n") ?: m.lower("w")?.removePrefix("o ")
 
     val all: List<SpeechRule> = listOf(
-        // "liga a lanterna", "acende a lanterna", "apaga a lanterna"
-        SpeechRule("^$ON{F} (?:a )?lanterna$") { ToolCall("lanterna", mapOf("estado" to "ligar")) },
-        SpeechRule("^$OFF{F} (?:a )?lanterna$") { ToolCall("lanterna", mapOf("estado" to "desligar")) },
+        // "liga a lanterna", "ligue a lanterna do celular", "acende o flash", "apaga a lanterna"
+        SpeechRule("^$ON{F} $TORCH$OF_PHONE{F}$") { ToolCall("lanterna", mapOf("estado" to "ligar")) },
+        SpeechRule("^$OFF{F} $TORCH$OF_PHONE{F}$") { ToolCall("lanterna", mapOf("estado" to "desligar")) },
 
         // "liga o wi-fi", "desativa o bluetooth", "ativa o modo avião"
-        SpeechRule("^(?<acao>$ON|$OFF){F} (?:o |a |os )?(?<tela>$RADIOS)$PHONE$") { m ->
+        SpeechRule("^(?<acao>$ON|$OFF){F} (?:o |a |os )?(?<tela>$RADIOS)(?:$PHONE|$OF_PHONE)$") { m ->
             val acao = if (m.lower("acao")!!.let { it.startsWith("des") || it.startsWith("apag") }) "desligar" else "ligar"
             ToolCall("abrir_ajuste", mapOf("tela" to m["tela"]!!, "acao" to acao))
         },
@@ -40,7 +45,7 @@ internal object SistemaRules {
         },
 
         // "aumenta o volume", "abaixa o som", "sobe o volume do toque"
-        SpeechRule("^(?<acao>$UP|$DOWN){F} (?:o |um pouco o |mais o )?(?:volume|som)(?: (?:do|da) (?<fluxo>mídia|midia|música|musica|toque|alarme|despertador))?(?: um pouco)?$") { m ->
+        SpeechRule("^(?<acao>$UP|$DOWN){F} (?:o |um pouco o |mais o )?(?:volume|som)(?: (?:do|da) (?<fluxo>mídia|midia|música|musica|toque|alarme|despertador))?$OF_PHONE(?: um pouco)?$") { m ->
             val acao = if (m.lower("acao")!!.matches(Regex(UP))) "aumentar" else "diminuir"
             ToolCall("volume", mapOf("acao" to acao) + (m["fluxo"]?.let { mapOf("fluxo" to it) } ?: emptyMap()))
         },
@@ -61,8 +66,8 @@ internal object SistemaRules {
         },
         SpeechRule("^(?:silencia|silencie|silenciar|cala|cale)$PHONE$") { ToolCall("modo_som", mapOf("modo" to "silencioso")) },
         // "liga o não perturbe", "desliga o não perturbe", "tira do silencioso"
-        SpeechRule("^$ON{F} (?:o )?(?:modo )?(?:não|nao) perturbe$") { ToolCall("modo_som", mapOf("modo" to "nao_perturbe")) },
-        SpeechRule("^$OFF{F} (?:o )?(?:modo )?(?:não|nao) perturbe$") { ToolCall("modo_som", mapOf("modo" to "normal")) },
+        SpeechRule("^$ON{F} (?:o )?(?:modo )?(?:não|nao) perturbe$OF_PHONE$") { ToolCall("modo_som", mapOf("modo" to "nao_perturbe")) },
+        SpeechRule("^$OFF{F} (?:o )?(?:modo )?(?:não|nao) perturbe$OF_PHONE$") { ToolCall("modo_som", mapOf("modo" to "normal")) },
         SpeechRule("^(?:tira|tire|sai|sair)$PHONE (?:do|de) (?:modo )?(?:silencioso|vibrar|não perturbe|nao perturbe)$") {
             ToolCall("modo_som", mapOf("modo" to "normal"))
         },
@@ -71,7 +76,7 @@ internal object SistemaRules {
         },
 
         // "aumenta o brilho", "brilho no máximo", "brilho automático"
-        SpeechRule("^(?<acao>$UP|$DOWN){F} (?:o |um pouco o )?brilho(?: da tela)?(?: um pouco)?$") { m ->
+        SpeechRule("^(?<acao>$UP|$DOWN){F} (?:o |um pouco o )?brilho(?: da tela)?$OF_PHONE(?: um pouco)?$") { m ->
             ToolCall("brilho", mapOf("acao" to if (m.lower("acao")!!.matches(Regex(UP))) "aumentar" else "diminuir"))
         },
         SpeechRule("^(?:$SET{F} )?(?:o )?brilho(?: da tela)? (?:no|na|em|pra|para|pro|a|ao) (?:$LEVEL)$") { m ->

@@ -28,6 +28,13 @@ interface Capability {
     val rules: List<SpeechRule> get() = emptyList()
 
     /**
+     * Pedaços de palavra (sem acento, minúsculas) que indicam que o pedido é com ela. Sem nenhum no pedido,
+     * as ferramentas dela ficam fora do prompt dos modelos: o Gemma erra mais com dezenas de ferramentas.
+     * Vazio: sempre oferecida.
+     */
+    val keywords: List<String> get() = emptyList()
+
+    /**
      * Acessos que liberam partes dela, para a tela de Ajustes mostrar e pedir. Sem eles a funcionalidade
      * segue, e a ferramenta que precisar diz qual falta.
      */
@@ -55,6 +62,9 @@ sealed interface Availability {
 enum class Permission(val label: String, val why: String) {
     DO_NOT_DISTURB("Acesso ao Não perturbe", "para ligar e desligar o Não perturbe e o modo silencioso"),
     WRITE_SETTINGS("Modificar configurações do sistema", "para mudar o brilho da tela"),
+    CALENDAR("Agenda", "para ver e criar compromissos na agenda do celular"),
+    NOTIFICATIONS("Notificações", "para avisar dos lembretes na hora"),
+    SMS("SMS", "para enviar SMS depois do seu toque em Confirmar"),
 }
 
 /**
@@ -76,6 +86,18 @@ class Capabilities(
     fun tools(): List<Tool> = all.flatMap { c -> c.tools.map { GatedTool(it, c, this) } }
 
     fun rules(): List<SpeechRule> = all.flatMap { it.rules }
+
+    /**
+     * As ferramentas que valem a pena mostrar aos modelos para [text]: tira as das funcionalidades
+     * cujas palavras-chave não aparecem. As de fora das funcionalidades ficam sempre.
+     */
+    fun toolsFor(text: String, tools: List<Tool>): List<Tool> {
+        val t = " " + simplify(text) + " "
+        val drop = all.filter { c -> c.keywords.isNotEmpty() && c.keywords.none { it in t } }
+            .flatMap { c -> c.tools.map { it.name } }
+            .toSet()
+        return tools.filter { it.name !in drop }
+    }
 
     /** Estado de cada uma, na ordem de [all], para a tela de Ajustes. */
     fun status(): List<Pair<Capability, Availability>> = all.map { it to it.availability() }
