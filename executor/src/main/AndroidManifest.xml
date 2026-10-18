@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- O Blico não vai para a Play Store; lembrete é uma das funções dele, então a hora exata vale. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- SMS: enviar depois do Confirmar. Sem a permissão, o Blico só deixa pronto no app de mensagens. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
 
     <application>
         <receiver

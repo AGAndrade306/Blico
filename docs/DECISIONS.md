@@ -276,3 +276,8 @@ Fase 1 do catálogo (itens 6 e 7).
 - **Lembretes com hora pelo AlarmManager**, avisados por notificação. "Me lembra…" com hora ou prazo vira lembrete; sem hora, fica para o modelo. A lista fica nas preferências do app para listar, cancelar e remarcar depois de reiniciar o celular. `USE_EXACT_ALARM` porque o Blico não vai para a Play Store e lembrete é uma das funções dele; sem ele, o aviso chega perto da hora.
 - **`PtWhen` no `core`**: "amanhã às 9", "daqui a 20 minutos", "sexta às 15h", "dia 25 ao meio-dia", "hoje à noite". As regras separam o quando do resto sem relógio, e a ferramenta resolve com o relógio do pedido. Hora sem dia que já passou de manhã vira a mesma hora da tarde ("às 3", às 10h, é 15h); com "da manhã" ou 13h em diante, vai para amanhã.
 - **Permissões** (agenda e notificações) aparecem em Ajustes › Funcionalidades com o porquê; negadas de vez, o botão abre os dados do app.
+
+## 2026-10-18 — SMS com Confirmar
+
+- **"manda um SMS pro João dizendo…"** acha o contato como o WhatsApp faz. Com a permissão de SMS dada em Ajustes › Funcionalidades, o próximo passo é enviar, que passa pelo cartão Confirmar com o número e o texto. Sem a permissão, abre o app de mensagens com o texto pronto.
+- **Só quando a pessoa diz SMS** (ou "mensagem de texto"): "manda mensagem pro João" continua indo para o WhatsApp.

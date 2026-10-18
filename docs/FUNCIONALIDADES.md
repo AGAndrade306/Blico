@@ -19,7 +19,7 @@ Das 25 áreas, 7 estão por fazer (memória, lembretes, câmera, finanças, casa
 | # | Área | Estado | O que já tem | O que falta (prioridade) |
 | --- | --- | --- | --- | --- |
 | 1 | Controle do celular | parte → **tem o básico neste PR** | Abrir apps, arquivos | Lanterna, volume, brilho, Não perturbe, bateria, espaço, conexão e telas de Configurações (**este PR**). Depois: notificações (ler, resumir, urgentes), fechar e alternar apps (Accessibility). Wi-Fi, Bluetooth e modo avião o Android 10+ não deixa ligar sozinho: o Blico abre o painel e diz isso |
-| 2 | Comunicação e contatos | parte | Ligar e WhatsApp com Confirmar, achar contato | SMS com Confirmar (F1), ler mensagens recebidas pelas notificações (F2), sugerir resposta para aprovar (F2), lembrar de responder (F4). Criar e editar contatos (F2). Atender ligação (F3, permissão ANSWER_PHONE_CALLS) |
+| 2 | Comunicação e contatos | parte | Ligar, WhatsApp e SMS com Confirmar, achar contato | Ler mensagens recebidas pelas notificações (F2), sugerir resposta para aprovar (F2), lembrar de responder (F4). Criar e editar contatos (F2). Atender ligação (F3, permissão ANSWER_PHONE_CALLS) |
 | 3 | WhatsApp e redes | parte | Enviar com Confirmar | Não há API oficial para ler conversas. Dá para trabalhar com o que chega por notificação (resumo, perguntas sem resposta, golpe em link) (F2). Buscar histórico antigo: **fora** sem API |
 | 4 | Memória pessoal | **tem o básico** | Lugares; memória cifrada com lembrar, consultar e esquecer por voz, Confirmar em cada fato, aviso de sensível, tela para ver e apagar, o Gemma lê | Separar pessoal e profissional, aprender estilo de escrita (F4) |
 | 5 | Voz | parte | Gesto do botão lateral, transcrição no aparelho, vozes neurais, parar a fala no gesto | Ida e volta curta na mesma sessão (P1-7 do plano), comandos compostos ("liga a lanterna e põe no silencioso") (F1), referências ("ele", "o segundo") com contexto da sessão (F3). Palavra de ativação: **fora** pela regra 1 |
@@ -86,7 +86,7 @@ Seguindo as fases do próprio catálogo, um PR por item. O que outro thread já 
 | Base | **Este** | Funcionalidades em pacotes, portas por pedido, tela Funcionalidades e o pacote Sistema |
 | F1 útil | Memória (pronta) | Memória pessoal cifrada: "lembra que…", "o que você sabe sobre…", "esquece…", tela para ver e apagar, o Gemma lê |
 | F1 útil | Agenda e lembretes (prontos) | Agenda do aparelho (ver, criar com Confirmar, horários livres, conflitos) e lembretes com hora em notificação |
-| F1 útil | Mensagens | SMS com Confirmar e "compartilhar para o Blico" (resumir, reescrever, traduzir, criar lembrete) |
+| F1 útil | Mensagens | SMS com Confirmar (pronto) e "compartilhar para o Blico" (resumir, reescrever, traduzir, criar lembrete) |
 | F1 útil | Ferramentas por pedido | Seleção de ferramentas por relevância (3.4) |
 | F2 celular | Notificações | Resumo, urgentes, golpe em link, abrir o app certo, tudo no aparelho |
 | F2 celular | Tela e câmera | Contexto da tela pelo papel de assistente e foto para o Gemma |

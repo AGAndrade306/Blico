@@ -31,6 +31,7 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "me lembra de tirar o bolo daqui a 20 minutos", "me lembra amanhã às 9 de pagar a conta" | Marca um lembrete que avisa por notificação na hora. "meus lembretes" lista, "cancela o lembrete do bolo" cancela. |
 | "o que eu tenho amanhã", "minha agenda da semana", "quando eu tô livre sexta" | Lê a agenda do celular (inclui a do Google sincronizada), avisa de conflitos e diz os horários livres. |
 | "marca reunião com o João amanhã às 15h", "agenda dentista sexta às 10" | Mostra o compromisso no cartão; você toca em Confirmar e ele entra na agenda. Avisa se bate com outro. |
+| "manda um SMS pro João dizendo que eu chego às 8" | Com a permissão de SMS, mostra o cartão e envia depois do Confirmar; sem ela, deixa pronto no app de mensagens. |
 
 O que não está na lista vai para o cérebro do celular (Gemma 4, baixado uma vez em Ajustes › Personalizar). Ele entende os mesmos pedidos ditos de outro jeito ("avisa a Ana que vou me atrasar", "tô com fome, quero um hambúrguer") e responde perguntas de conhecimento geral, tudo sem internet.
 

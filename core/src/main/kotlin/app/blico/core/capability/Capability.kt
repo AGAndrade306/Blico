@@ -57,6 +57,7 @@ enum class Permission(val label: String, val why: String) {
     WRITE_SETTINGS("Modificar configurações do sistema", "para mudar o brilho da tela"),
     CALENDAR("Agenda", "para ver e criar compromissos na agenda do celular"),
     NOTIFICATIONS("Notificações", "para avisar dos lembretes na hora"),
+    SMS("SMS", "para enviar SMS depois do seu toque em Confirmar"),
 }
 
 /**

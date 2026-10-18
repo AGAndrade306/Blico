@@ -25,6 +25,7 @@ import app.blico.core.capability.Capabilities
 import app.blico.core.capability.MemoriaCapability
 import app.blico.core.capability.MemoryAwareProvider
 import app.blico.core.capability.SistemaCapability
+import app.blico.core.capability.SmsCapability
 import app.blico.core.capability.SystemPort
 import app.blico.core.Origin
 import app.blico.core.Outcome
@@ -37,6 +38,7 @@ import app.blico.core.tools.googleTools
 import app.blico.executor.AndroidCalendarPort
 import app.blico.executor.AndroidDeviceGateway
 import app.blico.executor.AndroidReminders
+import app.blico.executor.AndroidSms
 import app.blico.executor.AndroidSystemPort
 import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
@@ -167,6 +169,7 @@ class BlicoApp : Application() {
                 SistemaCapability(),
                 MemoriaCapability(memory),
                 AgendaCapability(AndroidCalendarPort(this), AndroidReminders(this)),
+                SmsCapability(AndroidSms(this)),
             ),
         ) { capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty() }
     }

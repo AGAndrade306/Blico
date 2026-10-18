@@ -106,12 +106,13 @@ object AndroidPermissions {
         Permission.DO_NOT_DISTURB, Permission.WRITE_SETTINGS -> emptyList()
         Permission.CALENDAR -> listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
         Permission.NOTIFICATIONS -> listOf(Manifest.permission.POST_NOTIFICATIONS)
+        Permission.SMS -> listOf(Manifest.permission.SEND_SMS)
     }
 
     fun granted(context: Context, p: Permission): Boolean = when (p) {
         Permission.DO_NOT_DISTURB -> context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
         Permission.WRITE_SETTINGS -> Settings.System.canWrite(context)
-        Permission.CALENDAR, Permission.NOTIFICATIONS ->
+        Permission.CALENDAR, Permission.NOTIFICATIONS, Permission.SMS ->
             runtime(p).all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
     }
 
@@ -121,7 +122,7 @@ object AndroidPermissions {
         val intents = when (p) {
             Permission.DO_NOT_DISTURB -> listOf(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
             Permission.WRITE_SETTINGS -> listOf(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, pkg))
-            Permission.CALENDAR, Permission.NOTIFICATIONS -> emptyList()
+            Permission.CALENDAR, Permission.NOTIFICATIONS, Permission.SMS -> emptyList()
         } + Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
         for (intent in intents) {
             try {

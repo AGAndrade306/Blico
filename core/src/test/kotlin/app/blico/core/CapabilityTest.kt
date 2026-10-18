@@ -118,6 +118,7 @@ class CapabilityTest {
             SistemaCapability(),
             app.blico.core.capability.MemoriaCapability(app.blico.core.capability.InMemoryStore()),
             app.blico.core.capability.AgendaCapability(FakeCalendar(), FakeReminders()),
+            app.blico.core.capability.SmsCapability(FakeSms()),
         )
 
         /** As frases que os testes do [RuleRouter] conferem, lidas do próprio arquivo de teste. */
