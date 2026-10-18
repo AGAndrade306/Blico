@@ -36,6 +36,10 @@ internal fun DeviceResult.toToolResult(ok: String): ToolResult = when (this) {
     DeviceResult.Done -> ToolResult.Success(ok)
     is DeviceResult.NotInstalled -> ToolResult.Failure("não instalado: $what", "Não encontrei o $what no celular")
     is DeviceResult.Failed -> ToolResult.Failure(reason, "Não consegui, algo deu errado")
+    is DeviceResult.NeedsPermission -> ToolResult.Failure(
+        "sem permissão: ${permission.name}",
+        "Preciso da permissão ${permission.label} ${permission.why}. Libere em Ajustes, no app do Blico.",
+    )
 }
 
 internal fun ToolCall.arg(key: String): String? = args[key]?.trim()?.takeIf { it.isNotEmpty() }

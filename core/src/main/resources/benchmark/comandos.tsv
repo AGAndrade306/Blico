@@ -58,7 +58,7 @@ buscar_web	busca reviews do Galaxy S25	consulta=s25
 abrir_app	abre a calculadora	nome=calculadora
 abrir_app	quero ver minha galeria	nome=galeria
 abrir_app	entra no Instagram	nome=instagram
-abrir_app	abre as configurações	nome=configura
+abrir_ajuste	abre as configurações	tela=configura
 abrir_app	liga a câmera	nome=camera
 buscar_arquivos	cadê o comprovante que eu baixei ontem	termo=comprovante;periodo=ontem
 buscar_arquivos	encontra a planilha do orçamento	termo=orcamento

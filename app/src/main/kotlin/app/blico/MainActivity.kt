@@ -216,6 +216,7 @@ class MainActivity : ComponentActivity() {
             VoiceSettings()
             Places()
             DirectActionsCard(application as BlicoApp, tick)
+            CapabilitiesCard(application as BlicoApp, tick)
             LocalModelCard(application as BlicoApp)
             Cloud()
 

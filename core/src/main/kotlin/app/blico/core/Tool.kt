@@ -65,7 +65,29 @@ data class ExecContext(
     val direct: DirectActions = DirectActions(),
     /** Respostas rápidas para o card: o modelo do celular e o DuckDuckGo. */
     val knowledge: Knowledge = Knowledge.None,
+    /**
+     * As portas das funcionalidades ([app.blico.core.capability.Capability]) para este pedido, como o sistema
+     * do celular. Uma funcionalidade nova pede a sua aqui, sem mudar este construtor.
+     */
+    val ports: Ports = Ports.None,
 )
+
+/**
+ * Implementações das portas por tipo. No app são as do Android, criadas a cada pedido com quem abre as
+ * telas (o botão lateral ou o app); nos testes, fakes. Porta ausente quer dizer que o aparelho não tem.
+ */
+class Ports private constructor(private val byType: Map<Class<*>, Any>) {
+    inline fun <reified T : Any> get(): T? = get(T::class.java)
+
+    fun <T : Any> get(type: Class<T>): T? = byType[type]?.let(type::cast)
+
+    /** [type] explícito, para guardar pela interface e não pela classe que a implementa. */
+    fun <T : Any> with(type: Class<T>, impl: T): Ports = Ports(byType + (type to impl))
+
+    companion object {
+        val None = Ports(emptyMap())
+    }
+}
 
 interface Tool {
     val name: String

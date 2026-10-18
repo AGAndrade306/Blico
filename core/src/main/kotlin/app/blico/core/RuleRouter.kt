@@ -1,11 +1,16 @@
 package app.blico.core
 
+import app.blico.core.capability.SpeechRule
+
 /**
  * Primeiro nível do cérebro: entende os comandos mais comuns com regras, sem modelo nenhum.
  * Rápido, previsível e offline. O que não casar aqui vai para o modelo (local ou nuvem).
+ * [extra] são as regras das funcionalidades ([app.blico.core.capability.Capability]); rodam antes das de base.
  */
-class RuleRouter : LlmProvider {
+class RuleRouter(extra: List<SpeechRule> = emptyList()) : LlmProvider {
     override val id = "regras"
+
+    private val rules: List<Rule> = extra.map { Rule(expand(it.pattern), it.build) } + RULES
 
     override suspend fun chooseTools(request: LlmRequest): LlmDecision {
         val call = parse(request.text)
@@ -14,7 +19,7 @@ class RuleRouter : LlmProvider {
 
     fun parse(raw: String): ToolCall? {
         val text = Text.of(raw) ?: return null
-        for (rule in RULES) {
+        for (rule in rules) {
             val m = rule.regex.matchEntire(text.lower) ?: continue
             rule.build(Match(m, text.original))?.let { return it }
         }
@@ -35,7 +40,7 @@ class RuleRouter : LlmProvider {
         }
     }
 
-    private class Match(private val m: MatchResult, private val original: String) {
+    class Match internal constructor(private val m: MatchResult, private val original: String) {
         /** Valor do grupo no texto original, sem espaços nem muletas ("pra mim", "aí") nas pontas. */
         operator fun get(name: String): String? = raw(name)?.let(::stripFillers)?.takeIf { it.isNotEmpty() }
 
@@ -75,6 +80,13 @@ class RuleRouter : LlmProvider {
          */
         private const val FILLER = "pra mim|para mim|pra gente|para a gente|pra nós|para nós|aí|por favor|por gentileza|rapidinho|rapidão|agora|já"
         private const val F = "(?:,? (?:$FILLER))*"
+
+        /** Troca os trechos de [SpeechRule] pelos das regras de base. */
+        private fun expand(pattern: String): String = pattern
+            .replace("{F}", F)
+            .replace("{PRO}", PRO)
+            .replace("{TO}", TO_PLACE)
+            .replace("{ART}", OPT_ART)
 
         private fun g(m: Match, name: String) = m[name]
 

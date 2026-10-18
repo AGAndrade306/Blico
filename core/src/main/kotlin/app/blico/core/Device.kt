@@ -52,6 +52,9 @@ sealed interface DeviceResult {
     data class NotInstalled(val what: String) : DeviceResult
 
     data class Failed(val reason: String) : DeviceResult
+
+    /** O Android não deixou porque falta [permission]; a fala explica qual e onde liberar. */
+    data class NeedsPermission(val permission: app.blico.core.capability.Permission) : DeviceResult
 }
 
 /** Regras do envio direto que não dependem do Android. */
