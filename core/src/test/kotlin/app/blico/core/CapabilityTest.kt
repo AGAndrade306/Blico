@@ -114,7 +114,11 @@ class CapabilityTest {
     }
 
     companion object {
-        fun allCapabilitiesForTest(): List<Capability> = listOf(SistemaCapability(), app.blico.core.capability.MemoriaCapability(app.blico.core.capability.InMemoryStore()))
+        fun allCapabilitiesForTest(): List<Capability> = listOf(
+            SistemaCapability(),
+            app.blico.core.capability.MemoriaCapability(app.blico.core.capability.InMemoryStore()),
+            app.blico.core.capability.AgendaCapability(FakeCalendar(), FakeReminders()),
+        )
 
         /** As frases que os testes do [RuleRouter] conferem, lidas do próprio arquivo de teste. */
         fun basePhrases(): List<String> {

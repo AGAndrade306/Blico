@@ -267,3 +267,12 @@ Fase 1 do catálogo (item 4) e P1-4 do plano de revisão.
 - **Só o Gemma do celular lê**: `MemoryAwareProvider` leva até três fatos ligados ao pedido como contexto, para "manda pra minha irmã" achar a Ana. A nuvem nunca recebe a memória. Consultar marca o pedido como dado pessoal, então uma ferramenta de saída depois disso para no Confirmar.
 - **O contexto agora chega ao Gemma**: `LocalBrain.userMessage` passou a incluir `LlmRequest.context`, que antes só a nuvem lia. A conversa em grupo também se beneficia.
 - **Tela em Ajustes** para ver, acrescentar e apagar fatos, um por um ou todos. Ali quem digita ou toca é a própria pessoa, então vale direto.
+
+## 2026-10-18 — Agenda do celular e lembretes com hora
+
+Fase 1 do catálogo (itens 6 e 7).
+
+- **Agenda pelo CalendarContract**, sem login: as contas sincronizadas no aparelho (Google, Samsung, Outlook) já aparecem ali. Ver o dia ou a semana, horários livres entre 8h e 20h e conflitos são classe 0 e marcam o pedido como dado pessoal. Criar compromisso é classe 2: o cartão mostra título, quando, duração e local, e a resposta avisa se bate com outro. As ferramentas do Google continuam para quem entrou na conta.
+- **Lembretes com hora pelo AlarmManager**, avisados por notificação. "Me lembra…" com hora ou prazo vira lembrete; sem hora, fica para o modelo. A lista fica nas preferências do app para listar, cancelar e remarcar depois de reiniciar o celular. `USE_EXACT_ALARM` porque o Blico não vai para a Play Store e lembrete é uma das funções dele; sem ele, o aviso chega perto da hora.
+- **`PtWhen` no `core`**: "amanhã às 9", "daqui a 20 minutos", "sexta às 15h", "dia 25 ao meio-dia", "hoje à noite". As regras separam o quando do resto sem relógio, e a ferramenta resolve com o relógio do pedido. Hora sem dia que já passou de manhã vira a mesma hora da tarde ("às 3", às 10h, é 15h); com "da manhã" ou 13h em diante, vai para amanhã.
+- **Permissões** (agenda e notificações) aparecem em Ajustes › Funcionalidades com o porquê; negadas de vez, o botão abre os dados do app.

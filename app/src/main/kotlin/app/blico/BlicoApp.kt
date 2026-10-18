@@ -20,6 +20,7 @@ import app.blico.core.ExecContext
 import app.blico.core.NeuralVoices
 import app.blico.core.OptionalProvider
 import app.blico.core.Ports
+import app.blico.core.capability.AgendaCapability
 import app.blico.core.capability.Capabilities
 import app.blico.core.capability.MemoriaCapability
 import app.blico.core.capability.MemoryAwareProvider
@@ -33,7 +34,9 @@ import app.blico.core.SpeechOutput
 import app.blico.core.ToolRegistry
 import app.blico.core.tools.builtinTools
 import app.blico.core.tools.googleTools
+import app.blico.executor.AndroidCalendarPort
 import app.blico.executor.AndroidDeviceGateway
+import app.blico.executor.AndroidReminders
 import app.blico.executor.AndroidSystemPort
 import app.blico.executor.BlicoAccessibilityService
 import app.blico.executor.MediaStoreFileIndex
@@ -159,7 +162,13 @@ class BlicoApp : Application() {
      * Uma nova entra nesta lista; ferramentas, regras e a tela de Ajustes vêm dela.
      */
     val capabilities by lazy {
-        Capabilities(listOf(SistemaCapability(), MemoriaCapability(memory))) { capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty() }
+        Capabilities(
+            listOf(
+                SistemaCapability(),
+                MemoriaCapability(memory),
+                AgendaCapability(AndroidCalendarPort(this), AndroidReminders(this)),
+            ),
+        ) { capabilityPrefs.getStringSet("desligadas", emptySet()).orEmpty() }
     }
 
     fun setCapabilityOn(id: String, on: Boolean) {

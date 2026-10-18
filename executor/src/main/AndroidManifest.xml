@@ -11,7 +11,26 @@
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Agenda do celular: ver e, depois do Confirmar, criar compromissos. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <!-- Lembretes: notificação na hora, mesmo depois de reiniciar o celular. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- O Blico não vai para a Play Store; lembrete é uma das funções dele, então a hora exata vale. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
     <application>
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".ReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".BlicoAccessibilityService"
             android:exported="true"

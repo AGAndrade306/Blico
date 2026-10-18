@@ -55,6 +55,8 @@ sealed interface Availability {
 enum class Permission(val label: String, val why: String) {
     DO_NOT_DISTURB("Acesso ao Não perturbe", "para ligar e desligar o Não perturbe e o modo silencioso"),
     WRITE_SETTINGS("Modificar configurações do sistema", "para mudar o brilho da tela"),
+    CALENDAR("Agenda", "para ver e criar compromissos na agenda do celular"),
+    NOTIFICATIONS("Notificações", "para avisar dos lembretes na hora"),
 }
 
 /**
