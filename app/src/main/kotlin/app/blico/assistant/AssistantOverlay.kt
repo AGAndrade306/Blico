@@ -1,5 +1,30 @@
 package app.blico.assistant
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.MotionEvent
+import android.view.WindowManager
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.platform.LocalContext
+import app.blico.core.Origin
+import app.blico.ui.Aura
+import app.blico.ui.AuroraEdge
+import app.blico.ui.BlicoBadge
+import app.blico.ui.BlicoEyes
+import app.blico.ui.OriginBadge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,7 +38,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,10 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,11 +58,9 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import android.content.ClipData
-import app.blico.R
 import app.blico.core.Outcome
 import app.blico.ui.LocalBlico
 import app.blico.ui.BlicoButton
-import app.blico.ui.BlicoCard
 import app.blico.ui.BlicoLink
 import app.blico.ui.BlicoTheme
 import app.blico.ui.PanelLabel
@@ -57,6 +76,7 @@ internal fun AssistantOverlay(
     needsPermission: Boolean,
     thinking: Boolean,
     outcome: Outcome?,
+    origin: Origin?,
     onRetry: () -> Unit,
     onChoose: (ToolCall) -> Unit,
     onConfirm: (ToolCall) -> Unit,
@@ -65,24 +85,34 @@ internal fun AssistantOverlay(
 ) {
     BlicoTheme {
         val p = LocalBlico.current
-        // Tocar fora do cartão fecha o Blico.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.25f))
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose)
-                .safeDrawingPadding(),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            BlicoCard(
-                shape = RoundedCornerShape(20.dp),
-                contentPadding = PaddingValues(20.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
-            ) {
-                Column {
+        val aura = auraFor(state.phase, needsPermission, thinking, outcome, origin)
+        Box(Modifier.fillMaxSize()) {
+            // Tocar fora do cartão fecha o Blico. O véu é leve: o app aberto continua visível atrás.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.08f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
+            )
+            AuroraEdge(aura, Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.BottomCenter) {
+                // O cartão sobe com uma mola curta ao abrir.
+                val rise = remember { Animatable(0f) }
+                LaunchedEffect(Unit) { rise.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)) }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .graphicsLayer {
+                            translationY = (1f - rise.value) * 24.dp.toPx()
+                            alpha = rise.value.coerceIn(0f, 1f)
+                        }
+                        .clip(OverlayShape)
+                        .background(p.card.copy(alpha = 0.92f))
+                        .border(1.dp, p.separator.copy(alpha = 0.6f), OverlayShape)
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                        .padding(18.dp),
+                ) {
                     if (needsPermission) {
                         Text("O Blico precisa do microfone", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
@@ -93,10 +123,20 @@ internal fun AssistantOverlay(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(painterResource(R.drawable.blico_logo), contentDescription = null, modifier = Modifier.size(30.dp))
-                        Spacer(Modifier.size(10.dp))
-                        Text(state.label, style = MaterialTheme.typography.titleMedium, color = p.text, modifier = Modifier.weight(1f))
-                        StatusDot(state.phase)
+                        BlicoEyes(aura)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (outcome != null && !thinking) "Blico" else state.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = p.text,
+                            )
+                            caption(state.phase, thinking, outcome, origin)?.let {
+                                Text(it, style = MaterialTheme.typography.labelSmall, color = p.muted)
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        StateBadge(state.phase, thinking, outcome, origin)
                     }
 
                     // O que a pessoa disse fica pequeno em cima; a resposta é o destaque.
@@ -149,15 +189,94 @@ internal fun AssistantOverlay(
     }
 }
 
-/** Status no tema ASCII: [*] verde ouvindo, [*] vermelho na falha, [ ] no resto. */
+private val OverlayShape = RoundedCornerShape(28.dp)
+
+/** A cor da luz: ouvir e pensar em azul, o resultado na cor de onde rodou, o Confirmar em laranja. */
+internal fun auraFor(phase: Phase, needsPermission: Boolean, thinking: Boolean, outcome: Outcome?, origin: Origin?): Aura = when {
+    needsPermission -> Aura.REST
+    thinking || (outcome == null && phase == Phase.PROCESSING) -> Aura.THINKING
+    outcome is Outcome.Confirm -> Aura.CONFIRM
+    outcome is Outcome.Failed || outcome is Outcome.NotUnderstood -> Aura.REST
+    outcome != null -> if ((origin ?: Origin.DEVICE).kind == Origin.Kind.DEVICE) Aura.DEVICE else Aura.CLOUD
+    phase == Phase.LISTENING || phase == Phase.HEARING -> Aura.LISTENING
+    else -> Aura.REST
+}
+
+/** A linha pequena sob o título: o que está acontecendo com o seu dado agora. */
+private fun caption(phase: Phase, thinking: Boolean, outcome: Outcome?, origin: Origin?): String? = when {
+    thinking -> "entendendo o pedido"
+    outcome is Outcome.Confirm -> "texto montado da chamada, não do modelo"
+    outcome is Outcome.Failed -> null
+    outcome != null -> when ((origin ?: Origin.DEVICE).kind) {
+        Origin.Kind.DEVICE -> "nada saiu do aparelho"
+        Origin.Kind.CLOUD -> "dados mascarados antes de sair"
+        Origin.Kind.WEB -> "só a pesquisa saiu, para a web"
+        Origin.Kind.SERVICE -> "na sua conta ${origin?.name}"
+    }
+    phase == Phase.LISTENING || phase == Phase.HEARING -> "transcrição no celular"
+    else -> null
+}
+
+/** Selo do estado: `[~] ouvindo`, `[.] pensando`, `[!] confirmar` ou de onde veio a resposta. */
 @Composable
-private fun StatusDot(phase: Phase) {
+private fun StateBadge(phase: Phase, thinking: Boolean, outcome: Outcome?, origin: Origin?) {
     val p = LocalBlico.current
-    when (phase) {
-        Phase.LISTENING, Phase.HEARING -> StatusMark(on = true)
-        Phase.FAILED -> StatusMark(on = true, color = p.danger)
+    when {
+        thinking -> BlicoBadge("[.] pensando", p.blue, p.blueSoft)
+        outcome is Outcome.Confirm -> BlicoBadge("[!] confirmar", p.orange, p.orangeSoft)
+        phase == Phase.FAILED || outcome is Outcome.Failed -> BlicoBadge("[x] falhou", p.danger, p.orangeSoft)
+        outcome is Outcome.NotUnderstood -> StatusMark(on = false)
+        outcome != null -> OriginBadge(origin ?: Origin.DEVICE)
+        phase == Phase.LISTENING || phase == Phase.HEARING -> BlicoBadge("[~] ouvindo", p.blue, p.blueSoft)
         else -> StatusMark(on = false)
     }
+}
+
+/**
+ * O botão do Confirmar. Recusa o toque quando outra janela cobre o Blico, para que um app por cima
+ * não leve a pessoa a confirmar sem ver o cartão, e tira a tela de capturas enquanto está aberto.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+internal fun ConfirmButton(onConfirm: () -> Unit) {
+    val p = LocalBlico.current
+    var covered by remember { mutableStateOf(false) }
+    var blocked by remember { mutableStateOf(false) }
+    SecureWhileShown()
+    Box(
+        Modifier.pointerInteropFilter { ev ->
+            if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+                covered = ev.flags and (MotionEvent.FLAG_WINDOW_IS_OBSCURED or MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED) != 0
+            }
+            false // só observa; o toque segue para o botão
+        },
+    ) {
+        BlicoButton("Confirmar", onClick = { if (covered) blocked = true else onConfirm() }, color = p.orange)
+    }
+    if (blocked) {
+        Text(
+            "Tem uma janela de outro app por cima do Blico. Feche-a e toque de novo.",
+            style = MaterialTheme.typography.bodySmall,
+            color = p.danger,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+}
+
+/** FLAG_SECURE na janela enquanto o cartão está na tela: fica fora de capturas e da tela de recentes. */
+@Composable
+private fun SecureWhileShown() {
+    val window = LocalContext.current.findActivity()?.window ?: return
+    DisposableEffect(window) {
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /**
@@ -172,11 +291,12 @@ internal fun OutcomeDetails(
     onChoose: (ToolCall) -> Unit,
     onConfirm: (ToolCall) -> Unit,
     onShowBrowser: (() -> Unit)? = null,
+    origin: Origin? = null,
 ) {
     val p = LocalBlico.current
     Column {
         if (out is Outcome.Answer) {
-            AnswerDetails(out, onChoose, onShowBrowser)
+            AnswerDetails(out, onChoose, onShowBrowser, origin)
             return@Column
         }
         Text(
@@ -184,6 +304,10 @@ internal fun OutcomeDetails(
             style = MaterialTheme.typography.titleMedium,
             color = if (out is Outcome.Failed) p.danger else p.text,
         )
+        if (origin != null && out is Outcome.Done) {
+            Spacer(Modifier.height(6.dp))
+            OriginBadge(origin)
+        }
         // Escolha entre contatos: cada botão já leva a chamada completa.
         if (out.choices.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -208,7 +332,7 @@ internal fun OutcomeDetails(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            BlicoButton("Confirmar", onClick = { onConfirm(out.call) })
+            ConfirmButton { onConfirm(out.call) }
         }
     }
 }
@@ -219,7 +343,7 @@ internal fun OutcomeDetails(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AnswerDetails(out: Outcome.Answer, onChoose: (ToolCall) -> Unit, onShowBrowser: (() -> Unit)?) {
+private fun AnswerDetails(out: Outcome.Answer, onChoose: (ToolCall) -> Unit, onShowBrowser: (() -> Unit)?, origin: Origin?) {
     val p = LocalBlico.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -233,9 +357,16 @@ private fun AnswerDetails(out: Outcome.Answer, onChoose: (ToolCall) -> Unit, onS
         out.source?.let { "FONTE · ${it.uppercase()}" },
         "PESQUISA ABERTA NO NAVEGADOR".takeIf { out.browserOpened },
     )
-    if (meta.isNotEmpty()) {
+    if (origin != null || meta.isNotEmpty()) {
         Spacer(Modifier.height(8.dp))
-        Text(meta.joinToString("  ·  "), style = PanelLabel, color = p.muted)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Fora do cartão do botão lateral, que já leva o selo no topo, o selo vem junto da fonte.
+            if (origin != null) {
+                OriginBadge(origin)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(meta.joinToString("  ·  "), style = PanelLabel, color = p.muted)
+        }
     }
     Spacer(Modifier.height(10.dp))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

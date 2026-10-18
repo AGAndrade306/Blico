@@ -53,18 +53,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.blico.R
+import app.blico.core.Origin
 
 /**
- * Visual "Painel": fundo cinza-pedra, cartões brancos como widgets, um bloco escuro para a ação
- * principal. O acabamento é de terminal, em ASCII: a marca em letreiro, números e rótulos em
- * IBM Plex Mono, progresso como `[####----]`, marcas `[x]`. O texto corrido fica em IBM Plex Sans.
- * O verde do logo fica para o que está vivo: o status, o progresso, o que deu certo.
+ * Visual "Painel" com a paleta "Calma luminosa": fundo de argila clara, cartões quase brancos como
+ * widgets, um bloco de tinta para a ação principal. O acabamento é de terminal, em ASCII: a marca em
+ * letreiro, números e rótulos em IBM Plex Mono, progresso como `[####----]`, marcas `[x]`. O texto
+ * corrido fica em IBM Plex Sans. Cada cor tem um significado e só aparece com ele: verde para o que
+ * roda no celular e está pronto, azul para ouvindo, pensando e nuvem, laranja para o Confirmar e alertas.
  */
 @Immutable
 data class BlicoPalette(
     val background: Color,
     val card: Color,
-    /** Destaque: status, progresso e marcas de pronto. */
+    /** No celular e pronto: status, progresso, marcas e o selo `[celular]`. */
     val green: Color,
     val text: Color,
     val muted: Color,
@@ -72,41 +74,61 @@ data class BlicoPalette(
     /** Fundo de botões secundários e trilhos. */
     val fill: Color,
     val onGreen: Color,
+    /** Alertas e falhas, no mesmo laranja do Confirmar. */
     val danger: Color,
     val dark: Boolean,
     /** Bloco escuro do painel e botão principal. */
     val ink: Color = text,
     val onInk: Color = background,
+    /** Ouvindo, pensando e nuvem. */
+    val blue: Color = green,
+    /** Só o Confirmar. */
+    val orange: Color = danger,
+    /** Fundos claros dos selos, um por cor. */
+    val greenSoft: Color = fill,
+    val blueSoft: Color = fill,
+    val orangeSoft: Color = fill,
 )
 
 val LightBlico = BlicoPalette(
-    background = Color(0xFFEDEDEA),
-    card = Color(0xFFFFFFFF),
-    green = Color(0xFF1FA34A),
-    text = Color(0xFF111111),
-    muted = Color(0xFF6B6B64),
-    separator = Color(0xFFBDBDB6),
-    fill = Color(0xFFE2E2DD),
+    background = Color(0xFFEFE9E3),
+    card = Color(0xFFFBF8F5),
+    green = Color(0xFF2F7A4F),
+    text = Color(0xFF1E1B19),
+    muted = Color(0xFF6B625C),
+    separator = Color(0xFFD9CFC6),
+    fill = Color(0xFFE6DED6),
     onGreen = Color(0xFFFFFFFF),
-    danger = Color(0xFFC62B1F),
+    danger = Color(0xFFB9461A),
     dark = false,
-    ink = Color(0xFF111111),
-    onInk = Color(0xFFEDEDEA),
+    ink = Color(0xFF1E1B19),
+    onInk = Color(0xFFF4EFEA),
+    blue = Color(0xFF3155E8),
+    orange = Color(0xFFB9461A),
+    greenSoft = Color(0xFFE1EDE4),
+    blueSoft = Color(0xFFE4E9FD),
+    orangeSoft = Color(0xFFF8E3D8),
 )
 
+/** Grafite quente, sem preto puro; as cores de significado clareiam para ler no escuro. */
 val DarkBlico = BlicoPalette(
-    background = Color(0xFF0F0F0E),
-    card = Color(0xFF1B1B19),
-    green = Color(0xFF3DDC6E),
-    text = Color(0xFFEDEDEA),
-    muted = Color(0xFF9C9C94),
-    separator = Color(0xFF3A3A36),
-    fill = Color(0xFF2A2A27),
-    onGreen = Color(0xFF0F0F0E),
-    danger = Color(0xFFFF6B5E),
+    background = Color(0xFF1A1715),
+    card = Color(0xFF24201D),
+    green = Color(0xFF8FD0A6),
+    text = Color(0xFFF1EBE5),
+    muted = Color(0xFFA39890),
+    separator = Color(0xFF3A3430),
+    fill = Color(0xFF302A26),
+    onGreen = Color(0xFF1A1715),
+    danger = Color(0xFFF2A07A),
     dark = true,
-    ink = Color(0xFF2B2B28),
-    onInk = Color(0xFFEDEDEA),
+    ink = Color(0xFF3A332E),
+    onInk = Color(0xFFF1EBE5),
+    blue = Color(0xFF93A8FF),
+    orange = Color(0xFFF2A07A),
+    greenSoft = Color(0xFF22332A),
+    blueSoft = Color(0xFF232A45),
+    orangeSoft = Color(0xFF3A261C),
 )
 
 val LocalBlico = staticCompositionLocalOf { LightBlico }
@@ -192,7 +214,7 @@ fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = M
     Row(modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
             Text(title.uppercase(), style = MaterialTheme.typography.displaySmall, color = p.text)
-            Text("=".repeat(title.length), style = MaterialTheme.typography.displaySmall.copy(lineHeight = 18.sp), color = p.green, maxLines = 1)
+            Text("=".repeat(title.length), style = MaterialTheme.typography.displaySmall.copy(lineHeight = 18.sp), color = p.muted, maxLines = 1)
             if (subtitle != null) Text("> " + subtitle.uppercase(), style = PanelLabel, color = p.muted, modifier = Modifier.padding(top = 6.dp))
         }
         trailing()
@@ -254,7 +276,10 @@ fun BlicoCard(
     )
 }
 
-/** Botão: o principal é tinta escura cheia; o secundário é cinza com texto escuro. */
+/**
+ * Botão: o principal é tinta escura cheia; o secundário é cinza com texto escuro. [color] troca a
+ * tinta do principal por uma cor de significado, como o laranja do Confirmar.
+ */
 @Composable
 fun BlicoButton(
     text: String,
@@ -262,8 +287,16 @@ fun BlicoButton(
     modifier: Modifier = Modifier,
     primary: Boolean = true,
     enabled: Boolean = true,
+    color: Color? = null,
 ) {
     val p = LocalBlico.current
+    val fill = if (primary) color ?: p.ink else p.fill
+    val label = when {
+        !primary -> p.text
+        color == null -> p.onInk
+        p.dark -> p.background
+        else -> Color.White
+    }
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     Box(
@@ -272,12 +305,12 @@ fun BlicoButton(
             .defaultMinSize(minHeight = 44.dp)
             .alpha(if (!enabled) 0.4f else if (pressed) 0.7f else 1f)
             .clip(ControlShape)
-            .background(if (primary) p.ink else p.fill)
+            .background(fill)
             .clickable(enabled = enabled, interactionSource = source, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = MaterialTheme.typography.labelLarge, color = if (primary) p.onInk else p.text)
+        Text(text, style = MaterialTheme.typography.labelLarge, color = label)
     }
 }
 
@@ -349,6 +382,31 @@ fun BlicoProgress(fraction: Float, modifier: Modifier = Modifier) {
             maxLines = 1,
             softWrap = false,
         )
+    }
+}
+
+/** Selo em mono, `[celular]`, com o fundo claro da cor. */
+@Composable
+fun BlicoBadge(text: String, color: Color, background: Color, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier.clip(ChipShape).background(background).padding(horizontal = 8.dp, vertical = 4.dp),
+    )
+}
+
+/** De onde veio o resultado: verde no celular, azul na nuvem e na web, neutro para serviços. */
+@Composable
+fun OriginBadge(origin: Origin, modifier: Modifier = Modifier, detail: String? = null) {
+    val p = LocalBlico.current
+    val text = if (detail.isNullOrBlank()) origin.badge else "${origin.badge} $detail"
+    when (origin.kind) {
+        Origin.Kind.DEVICE -> BlicoBadge(text, p.green, p.greenSoft, modifier)
+        Origin.Kind.CLOUD, Origin.Kind.WEB -> BlicoBadge(text, p.blue, p.blueSoft, modifier)
+        Origin.Kind.SERVICE -> BlicoBadge(text, p.muted, p.fill, modifier)
     }
 }
 
