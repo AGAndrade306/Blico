@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.service.voice.VoiceInteractionSession
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.view.WindowManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,11 +17,13 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import app.blico.BlicoApp
 import app.blico.MainActivity
+import app.blico.core.AgentEvent
 import app.blico.core.AgentFile
 import app.blico.core.AgentResult
 import app.blico.core.AgentRun
 import app.blico.core.Assistant
 import app.blico.core.ExecContext
+import app.blico.core.Origin
 import app.blico.core.Outcome
 import app.blico.core.ToolCall
 import app.blico.core.TranscriptionEvent
@@ -47,6 +50,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
     private var state by mutableStateOf(ListeningState())
     private var needsPermission by mutableStateOf(false)
     private var outcome by mutableStateOf<Outcome?>(null)
+    private var origin by mutableStateOf<Origin?>(null)
     private var thinking by mutableStateOf(false)
 
     /** Agente parado no cartão, esperando o Confirmar ou uma escolha. */
@@ -59,6 +63,8 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
     }
 
     override fun onCreateContentView(): View = ComposeView(context).apply {
+        // Toque que chega com outra janela por cima não vale: nada de confirmar às cegas.
+        filterTouchesWhenObscured = true
         setViewTreeLifecycleOwner(owner)
         setViewTreeSavedStateRegistryOwner(owner)
         setContent {
@@ -67,6 +73,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
                 needsPermission = needsPermission,
                 thinking = thinking,
                 outcome = outcome,
+                origin = origin,
                 onRetry = ::startListening,
                 onChoose = { call -> resumeOr(call, confirmed = false) },
                 onConfirm = { call -> resumeOr(call, confirmed = true) },
@@ -102,7 +109,7 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
         cancelWork()
         app.speech.stop() // o gesto interrompe a fala, e o microfone não ouve o próprio Blico
         state = ListeningState()
-        outcome = null
+        show(null, null)
         pending = null
         needsPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
@@ -117,23 +124,28 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
                 if (event is TranscriptionEvent.Final) {
                     val agent = AgentFile.match(event.text, app.agents.agents())
                     if (agent != null) {
-                        actAgent { ctx -> app.agentRunner.start(agent.second, agent.first, ctx) }
+                        actAgent { ctx, onEvent -> app.agentRunner.start(agent.second, agent.first, ctx, onEvent = onEvent) }
                     } else {
-                        act { assistant, ctx -> assistant.handle(event.text, ctx) }
+                        act { assistant, ctx, route -> assistant.handle(event.text, ctx, route) }
                     }
                 }
             }
         }
     }
 
-    /** Roda um passo do assistente e reage ao resultado. */
-    private fun act(step: suspend (Assistant, ExecContext) -> Outcome) {
+    /**
+     * Roda um passo do assistente e reage ao resultado. O passo avisa por onde o pedido passou, para
+     * o selo e a cor da aurora; sem aviso, foi um toque no card e rodou no celular.
+     */
+    private fun act(step: suspend (Assistant, ExecContext, (String) -> Unit) -> Outcome) {
         scope.launch {
             thinking = true
-            val out = step(app.assistant, app.execContext { context.startActivity(it) })
+            var route: String? = null
+            val out = step(app.assistant, app.execContext { context.startActivity(it) }) { route = it }
             thinking = false
-            outcome = out
-            app.record(out)
+            val from = Origin.of(route, out)
+            show(out, from)
+            app.record(out, from)
             app.say(out.spoken)
             // Ação feita: o app alvo já está abrindo por trás, então o cartão sai da frente.
             if (out is Outcome.Done) finish()
@@ -144,22 +156,33 @@ class BlicoSession(context: Context) : VoiceInteractionSession(context) {
     private fun resumeOr(call: ToolCall, confirmed: Boolean) {
         val run = pending
         if (run != null) {
-            actAgent { ctx -> app.agentRunner.resume(run, call, ctx, confirmed) }
+            actAgent { ctx, onEvent -> app.agentRunner.resume(run, call, ctx, confirmed, onEvent) }
         } else {
-            act { assistant, ctx -> assistant.execute(call, ctx, confirmed) }
+            act { assistant, ctx, _ -> assistant.execute(call, ctx, confirmed) }
         }
     }
 
     /** Roda o agente até a resposta ou até o próximo cartão. */
-    private fun actAgent(step: suspend (ExecContext) -> AgentResult) {
+    private fun actAgent(step: suspend (ExecContext, (AgentEvent) -> Unit) -> AgentResult) {
         scope.launch {
             thinking = true
             pending = null
-            val result = step(app.execContext { context.startActivity(it) })
+            var route: String? = null
+            val result = step(app.execContext { context.startActivity(it) }) { e -> if (e is AgentEvent.Routed && route != "nuvem") route = e.provider }
             thinking = false
             pending = result.paused
-            outcome = result.outcome
+            show(result.outcome, Origin.of(route, result.outcome))
             app.say(result.outcome.spoken)
+        }
+    }
+
+    /** Mostra o resultado. Com o cartão Confirmar aberto, a janela sai de capturas de tela. */
+    private fun show(out: Outcome?, from: Origin?) {
+        outcome = out
+        origin = from
+        window?.window?.let { w ->
+            if (out is Outcome.Confirm) w.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            else w.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
 

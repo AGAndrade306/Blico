@@ -53,4 +53,13 @@ class ActivityLogTest {
         assertEquals(80, e.text.length)
         assertEquals('…', e.text.last())
     }
+
+    @Test
+    fun guardaOSeloEAceitaLinhasAntigasSemSelo() {
+        val log = listOf(ActivityLog.Entry("Alarme às 7:30", 5, Origin.DEVICE), ActivityLog.Entry("Evento criado", 4, Origin.GOOGLE))
+        assertEquals(log, ActivityLog.decode(ActivityLog.encode(log)))
+        val old = ActivityLog.decode("3\tTimer de 10 minutos")
+        assertEquals(listOf(ActivityLog.Entry("Timer de 10 minutos", 3)), old)
+        assertEquals(Origin.CLOUD, ActivityLog.entryFor(Outcome.Done("ok", ToolCall("timer")), 1, Origin.CLOUD)?.origin)
+    }
 }
