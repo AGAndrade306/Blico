@@ -19,6 +19,7 @@ import app.blico.core.DirectActions
 import app.blico.core.ExecContext
 import app.blico.core.NeuralVoices
 import app.blico.core.OptionalProvider
+import app.blico.core.Origin
 import app.blico.core.Outcome
 import app.blico.core.RedactingProvider
 import app.blico.core.RuleRouter
@@ -177,9 +178,9 @@ class BlicoApp : Application() {
     /** O que o Blico fez, o mais novo primeiro. Fica só no celular. */
     val activity: StateFlow<List<ActivityLog.Entry>> get() = activityFlow
 
-    /** Anota uma ação concluída, venha ela do botão lateral ou da tela inicial. */
-    fun record(outcome: Outcome) {
-        val entry = ActivityLog.entryFor(outcome, System.currentTimeMillis()) ?: return
+    /** Anota uma ação concluída, venha ela do botão lateral ou da tela inicial, com o selo de onde rodou. */
+    fun record(outcome: Outcome, origin: Origin? = null) {
+        val entry = ActivityLog.entryFor(outcome, System.currentTimeMillis(), origin) ?: return
         val next = ActivityLog.add(activityFlow.value, entry)
         activityFlow.value = next
         activityPrefs.edit().putString("log", ActivityLog.encode(next)).apply()

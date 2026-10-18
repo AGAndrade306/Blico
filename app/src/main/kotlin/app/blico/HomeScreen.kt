@@ -50,6 +50,7 @@ import app.blico.assistant.OutcomeDetails
 import app.blico.core.ActivityLog
 import app.blico.core.Assistant
 import app.blico.core.ExecContext
+import app.blico.core.Origin
 import app.blico.core.Outcome
 import app.blico.core.TranscriptionEvent
 import app.blico.ui.BlicoButton
@@ -59,6 +60,7 @@ import app.blico.ui.BlicoLink
 import app.blico.ui.CardShape
 import app.blico.ui.DashedRule
 import app.blico.ui.LocalBlico
+import app.blico.ui.OriginBadge
 import app.blico.ui.PanelLabel
 import app.blico.ui.PlexMono
 import app.blico.ui.StatusMark
@@ -105,6 +107,7 @@ fun HomeScreen(
     var job by remember { mutableStateOf<Job?>(null) }
     var thinking by remember { mutableStateOf(false) }
     var outcome by remember { mutableStateOf<Outcome?>(null) }
+    var origin by remember { mutableStateOf<Origin?>(null) }
     var typed by remember { mutableStateOf("") }
     val activity by app.activity.collectAsState()
 
@@ -116,16 +119,20 @@ fun HomeScreen(
     DisposableEffect(Unit) { onDispose { job?.cancel() } }
     LaunchedEffect(visible) { if (!visible) stopListening() }
 
-    fun act(step: suspend (Assistant, ExecContext) -> Outcome) {
+    /** Roda um passo; o passo avisa por onde o pedido passou, para o selo. Toque no card roda no celular. */
+    fun act(step: suspend (Assistant, ExecContext, (String) -> Unit) -> Outcome) {
         scope.launch {
             thinking = true
+            var route: String? = null
             val out = try {
-                step(app.assistant, app.execContext(launch))
+                step(app.assistant, app.execContext(launch)) { route = it }
             } finally {
                 thinking = false
             }
+            val from = Origin.of(route, out)
             outcome = out
-            app.record(out)
+            origin = from
+            app.record(out, from)
             app.say(out.spoken)
         }
     }
@@ -135,7 +142,7 @@ fun HomeScreen(
         listening = null
         app.speech.stop()
         outcome = null
-        act { assistant, ctx -> assistant.handle(text, ctx) }
+        act { assistant, ctx, route -> assistant.handle(text, ctx, route) }
     }
 
     fun talk() {
@@ -150,7 +157,7 @@ fun HomeScreen(
             try {
                 transcriber.listen().collect { event ->
                     listening = listening?.reduce(event)
-                    if (event is TranscriptionEvent.Final) act { assistant, ctx -> assistant.handle(event.text, ctx) }
+                    if (event is TranscriptionEvent.Final) act { assistant, ctx, route -> assistant.handle(event.text, ctx, route) }
                 }
             } finally {
                 job = null
@@ -204,8 +211,9 @@ fun HomeScreen(
                 outcome?.let { out ->
                     OutcomeDetails(
                         out,
-                        onChoose = { call -> act { assistant, ctx -> assistant.execute(call, ctx) } },
-                        onConfirm = { call -> act { assistant, ctx -> assistant.execute(call, ctx, confirmed = true) } },
+                        onChoose = { call -> act { assistant, ctx, _ -> assistant.execute(call, ctx) } },
+                        onConfirm = { call -> act { assistant, ctx, _ -> assistant.execute(call, ctx, confirmed = true) } },
+                        origin = origin,
                     )
                 }
             }
@@ -327,10 +335,15 @@ private fun LogRow(e: ActivityLog.Entry) {
     val p = LocalBlico.current
     val at = Instant.ofEpochMilli(e.at).atZone(ZoneId.systemDefault())
     val time = if (at.toLocalDate() == LocalDate.now()) at.format(HOUR) else at.format(WEEKDAY).trimEnd('.') + " " + at.format(HOUR)
-    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.Top) {
-        Text(e.text, style = MaterialTheme.typography.labelMedium, color = p.text, modifier = Modifier.weight(1f))
-        Spacer(Modifier.width(12.dp))
+    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(time, style = MaterialTheme.typography.labelSmall, color = p.muted)
+        Spacer(Modifier.width(10.dp))
+        Text(e.text, style = MaterialTheme.typography.labelMedium, color = p.text, modifier = Modifier.weight(1f))
+        // Ações antigas, de antes do selo, ficam sem ele.
+        e.origin?.let {
+            Spacer(Modifier.width(8.dp))
+            OriginBadge(it)
+        }
     }
     DashedRule(Modifier.fillMaxWidth())
 }

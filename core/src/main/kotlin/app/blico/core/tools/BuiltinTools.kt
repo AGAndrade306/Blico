@@ -334,7 +334,11 @@ internal object BuscarWeb : BaseTool(
 
     private suspend fun pointed(q: String, ctx: ExecContext): ToolResult {
         ctx.knowledge.answer(q)?.let { return ToolResult.Answer(it, LOCAL_SOURCE, search = q) }
-        ctx.knowledge.lookup(q)?.let { return ToolResult.Answer(it.text, it.source, search = q) }
+        ctx.knowledge.lookup(q)?.let { web ->
+            // Com o trecho da web em mãos, o modelo do celular tenta de novo e responde em uma frase.
+            ctx.knowledge.answer(q, web.text)?.let { return ToolResult.Answer(it, "${web.source} + $LOCAL_SOURCE", search = q) }
+            return ToolResult.Answer(web.text, web.source, search = q)
+        }
         return ctx.device.perform(DeviceAction.WebSearch(q)).toToolResult("Pesquisando $q")
     }
 

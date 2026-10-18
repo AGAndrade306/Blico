@@ -31,8 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.blico.BlicoApp
+import app.blico.assistant.ConfirmButton
 import app.blico.core.AgentEvent
 import app.blico.core.AgentProfile
 import app.blico.core.AgentResult
@@ -161,7 +164,7 @@ internal fun LineView(line: Line, lead: String?) {
     val p = LocalBlico.current
     when (line) {
         is Line.You -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            Bubble(line.text, background = p.green, color = p.onGreen)
+            Bubble(line.text, background = p.ink, color = p.onInk)
         }
         is Line.Event -> when (val e = line.event) {
             is AgentEvent.Asked -> AgentLine(e.agent, "→ ${e.to}") { Bubble(e.text, background = p.card, color = p.text) }
@@ -170,21 +173,14 @@ internal fun LineView(line: Line, lead: String?) {
                 val to = if (lead == null || e.agent == lead) null else "→ $lead"
                 AgentLine(e.agent, to) { Bubble(e.text, background = p.card, color = if (e.failed) p.danger else p.text) }
             }
-            is AgentEvent.Acted -> {
-                val args = e.call.args.toSortedMap().values.joinToString(", ")
-                Text(
-                    "${e.agent} usou ${e.call.tool}($args) · ${e.spoken}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = p.muted,
-                    modifier = Modifier.padding(start = 44.dp),
-                )
+            is AgentEvent.Acted -> Column(Modifier.padding(start = 44.dp)) {
+                ReceiptLine(e.call.tool, "ok", p.green)
+                if (e.spoken.isNotBlank()) Text(e.spoken, style = MaterialTheme.typography.bodySmall, color = p.muted)
             }
-            is AgentEvent.Waiting -> Text(
-                "${e.agent} espera o seu toque",
-                style = MaterialTheme.typography.bodySmall,
-                color = p.muted,
-                modifier = Modifier.padding(start = 44.dp),
-            )
+            is AgentEvent.Waiting -> Box(Modifier.padding(start = 44.dp)) {
+                val tool = (e.outcome as? Outcome.Confirm)?.call?.tool ?: e.agent
+                ReceiptLine(tool, "seu toque", p.orange, strong = true)
+            }
             is AgentEvent.Routed -> Text(
                 "${e.agent} decidiu ${ROUTES[e.provider] ?: e.provider}",
                 style = MaterialTheme.typography.labelSmall,
@@ -192,6 +188,26 @@ internal fun LineView(line: Line, lead: String?) {
                 modifier = Modifier.padding(start = 44.dp),
             )
         }
+    }
+}
+
+/** Passo do agente como linha de recibo: `agenda_ver ........ ok`. */
+@Composable
+private fun ReceiptLine(tool: String, status: String, color: Color, strong: Boolean = false) {
+    val p = LocalBlico.current
+    val style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (strong) FontWeight.SemiBold else FontWeight.Medium)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(tool, style = style, color = if (strong) color else p.text, maxLines = 1)
+        Text(
+            " " + ".".repeat(60),
+            style = style,
+            color = p.separator,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.weight(1f),
+        )
+        Text(" $status", style = style, color = color, maxLines = 1)
     }
 }
 
@@ -240,7 +256,7 @@ internal fun WaitingCard(
             is Outcome.Confirm -> {
                 Text(out.summary.title, style = MaterialTheme.typography.titleMedium)
                 out.summary.fields.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodyMedium) }
-                BlicoButton("Confirmar", onClick = { onConfirm(out.call) })
+                ConfirmButton { onConfirm(out.call) }
             }
             is Outcome.Choose -> {
                 Text(out.spoken, style = MaterialTheme.typography.titleMedium)

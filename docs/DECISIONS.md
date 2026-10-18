@@ -199,6 +199,26 @@ André pediu que pergunta pontual seja respondida no card, sem mandar para o nav
 - **Pergunta que ninguém entendeu** (o Gemma disse que não sabe e a nuvem está desligada ou não decidiu): se parece pergunta, vira busca em vez de "Ainda não sei fazer isso".
 - **Card de resposta**: o que a pessoa disse fica pequeno em cima, a resposta é o destaque (rolável quando é longa), com a fonte em mono, "Copiar" e o caminho para o navegador. As métricas do microfone desceram para o rodapé. O tema (pontos ou ASCII) é assunto de outra etapa e não muda aqui.
 
+## 2026-10-18 — Pergunta pontual sem Gemma nem nuvem
+
+No teste do André, "qual a capital da Mongólia" abriu o navegador. Sem o Gemma pronto e sem a nuvem, a única fonte do card era a resposta instantânea do DuckDuckGo, que quase nunca responde pergunta em frase.
+
+- **Página de resultados do DuckDuckGo como segunda fonte** (`html.duckduckgo.com`, sem JavaScript, sem conta): o card mostra o trecho do primeiro resultado que não é anúncio, com o site de onde veio. Passa pelo mesmo filtro do `Redactor` antes de sair.
+- **Com o trecho em mãos, o Gemma tenta de novo** e responde em uma frase, com o trecho entrando como dado não confiável. Sem o Gemma, o card mostra o trecho como veio.
+- O navegador só abre quando nenhuma das fontes tem nada.
+
+## 2026-10-18 — Calma luminosa, aurora e ícone vivo
+
+André aprovou a direção "Calma luminosa" (thread "Revisão e plano do Blico") e pediu que o card do botão lateral tivesse movimento, como a borda do Gemini e o ícone animado do Claude. A diagramação Painel e o ASCII continuam.
+
+- **Paleta com significado** (`Theme.kt`): fundo de argila clara `#EFE9E3`, tinta `#1E1B19`, verde `#2F7A4F` só para o que roda no celular, azul `#3155E8` para ouvindo, pensando e nuvem, laranja `#B9461A` só no Confirmar e em alertas. O escuro é grafite quente `#1A1715`, sem preto puro. O sublinhado `=` dos títulos saiu do verde, que agora quer dizer "no celular".
+- **Selo de origem** (`Origin`, no `core`, com teste): todo resultado leva `[celular]`, `[nuvem]`, `[web]` ou `[google]`, no card e na atividade. O selo diz para onde o dado foi, então vale o que mais saiu: serviço, depois nuvem, depois web. `[web]` aparece quando a busca do DuckDuckGo saiu do aparelho, mesmo que o Gemma tenha escrito a frase. Ferramentas MCP ainda saem como `[celular]` ou `[nuvem]`, porque o nome delas não diz o serviço; fica para quando o registro souber.
+- **Aurora** (`AuroraEdge`): um gradiente cônico gira numa faixa na borda da tela, acompanhando o canto real do aparelho, com um brilho que respira por dentro. Repouso não tem luz; ouvindo é azul com verde e gira mais rápido; no celular é verde; nuvem e web são azuis; o Confirmar é laranja e pulsa. Com "Remover animações" ligado, a luz fica parada.
+- **Ícone vivo** (`BlicoEyes`): dois olhos num anel que gira na cor do estado. Piscam em repouso, viram barras de voz ao ouvir, olham para cima pensando e na nuvem, pulsam no Confirmar.
+- **Sem desfoque da tela de trás**: o Android só desfoca a janela inteira, e isso esconderia o app que o André quer ver por trás do card. O card ficou 92% opaco, com borda fina, e o véu escuro caiu de 25% para 8%.
+- **Confirmar à prova de sobreposição** (P0-5, combinado com o thread de revisão): o botão recusa o toque quando outra janela cobre o Blico, mesmo em parte, e explica por quê; a janela do botão lateral ignora toques quando está toda coberta; enquanto o cartão está aberto, a janela fica fora de capturas de tela (`FLAG_SECURE`), no botão lateral e no app.
+- **Passos do agente como recibo**: cada ferramenta usada vira uma linha `agenda_ver ........ ok` em mono, e a que espera o Confirmar fica em laranja com "seu toque". A sua mensagem na conversa passou do verde para a tinta.
+
 ## 2026-10-18 — Mascaramento de documentos, cartão, CEP e PIX
 
 A revisão de privacidade (`plano/revisao-e-plano.md`, pasta do projeto) achou que o `Redactor` só conhecia contatos, endereços, telefones e e-mails.

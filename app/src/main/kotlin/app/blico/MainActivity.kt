@@ -53,6 +53,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.blico.assistant.FileResults
+import app.blico.assistant.ConfirmButton
+import app.blico.core.Origin
 import app.blico.core.Outcome
 import app.blico.memory.PrefsPlaceBook
 import app.blico.voice.ListeningState
@@ -371,7 +373,7 @@ class MainActivity : ComponentActivity() {
                         val out = app.assistant.handle(text, app.execContext { startActivity(it) }) { via = it }
                         route = via?.let { "Entendido por: ${ROUTES[it] ?: it}, em %.1f s".format(java.util.Locale.forLanguageTag("pt-BR"), (System.currentTimeMillis() - start) / 1000.0) }
                         result = out
-                        app.record(out)
+                        app.record(out, Origin.of(via, out))
                         app.say(out.spoken)
                     }
                 })
@@ -389,14 +391,14 @@ class MainActivity : ComponentActivity() {
                 }
                 (result as? Outcome.Confirm)?.let { confirm ->
                     confirm.summary.fields.forEach { (k, v) -> Text("$k: $v", style = MaterialTheme.typography.bodyMedium) }
-                    BlicoButton("Confirmar", onClick = {
+                    ConfirmButton {
                         scope.launch {
                             val out = app.assistant.execute(confirm.call, app.execContext { startActivity(it) }, confirmed = true)
                             result = out
-                            app.record(out)
+                            app.record(out, Origin.of(null, out))
                             app.say(out.spoken)
                         }
-                    })
+                    }
                 }
             }
         }
