@@ -209,3 +209,13 @@ A revisão de privacidade (`plano/revisao-e-plano.md`, pasta do projeto) achou q
 - **CEP só com hífen:** oito dígitos seguidos se confundem com telefone e número de pedido.
 - **Chave PIX aleatória é um UUID**; e-mail e telefone como chave PIX já eram mascarados.
 - Como o `WebAnswers` só manda ao DuckDuckGo consultas em que o `Redactor` não acha nada, consultas com esses dados também deixam de sair.
+
+## 2026-10-18 — Dado pessoal lido por um agente não sai sem o Confirmar
+
+Achado da revisão: um agente lia um e-mail (`gmail_ler`, classe 0) e, a pedido do próprio texto do e-mail, chamava `buscar_web` ou uma ferramenta MCP marcada como leitura, que executavam direto e mandavam o argumento para o DuckDuckGo ou para o servidor do serviço. O `Redactor` não pega códigos nem textos inteiros.
+
+- **Duas marcas novas em `Tool`:** `egress` (manda os argumentos a um terceiro fora do aparelho e fora das contas da pessoa: `buscar_web`, `abrir_pesquisa`, toda ferramenta MCP) e `readsPrivate` (devolve dado pessoal: `agenda_ver`, `gmail_ler`, `buscar_arquivos`, toda ferramenta MCP).
+- **O agente fica marcado** (`AgentRun.privateData`) a partir do primeiro resultado de uma ferramenta `readsPrivate`, ou quando um membro da equipe que leu dado pessoal responde. Na conversa em grupo, a marca passa aos agentes seguintes, porque o que o primeiro disse vai no contexto deles.
+- **Marcado, toda ferramenta de saída para no Confirmar**, mesmo sendo leitura, com os argumentos à vista no cartão (texto da chamada, regra 2). Sem marca, nada muda: a pesquisa de um agente de pesquisa segue direta.
+- **Agenda e Gmail não são saída**: falam com a conta da própria pessoa, e o que escrevem já é classe 2.
+- **Pedido direto, fora de agente, não muda**: ali o argumento vem da fala da pessoa, não de algo lido.

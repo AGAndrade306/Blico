@@ -318,6 +318,8 @@ internal object BuscarWeb : BaseTool(
     required = setOf("consulta"),
     title = "Pesquisar",
 ) {
+    override val egress = true
+
     /**
      * Pergunta pontual: responde no card (modelo do celular, depois DuckDuckGo) e só abre o navegador se nenhum souber.
      * Pesquisa ampla: abre o navegador e deixa no card um resumo raso ou um direcionamento.
@@ -361,6 +363,7 @@ internal object AbrirPesquisa : BaseTool(
     title = "Pesquisar",
 ) {
     override val exposedToModels = false
+    override val egress = true
 
     override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
         val q = call.arg("consulta")!!

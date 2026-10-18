@@ -16,7 +16,11 @@ class RiskPolicy(
     private val registry: ToolRegistry,
     private val blocklist: Set<String> = PaymentAppsBlocklist.packages,
 ) {
-    fun decide(call: ToolCall): Decision {
+    /**
+     * [privateData] diz que o pedido já carrega dado pessoal lido por uma ferramenta (um e-mail, a agenda).
+     * Aí uma ferramenta de saída ([Tool.egress]) mostra no cartão o que vai sair, mesmo sendo leitura.
+     */
+    fun decide(call: ToolCall, privateData: Boolean = false): Decision {
         val tool = registry[call.tool]
             ?: return Decision.Refuse("Ferramenta desconhecida: ${call.tool}")
 
@@ -27,6 +31,10 @@ class RiskPolicy(
 
         val problems = registry.validate(call)
         if (problems.isNotEmpty()) return Decision.Refuse(problems.joinToString("; "))
+
+        if (privateData && tool.egress && tool.risk in setOf(RiskClass.READ, RiskClass.PREPARE)) {
+            return Decision.Confirm(tool.summarize(call))
+        }
 
         return when (tool.risk) {
             RiskClass.READ, RiskClass.PREPARE -> Decision.Execute

@@ -47,6 +47,8 @@ data class AgentRun(
     val delegation: Delegation? = null,
     /** O que já se disse na conversa em grupo, embrulhado como dado não confiável. */
     val context: List<String> = emptyList(),
+    /** Já leu dado pessoal (e-mail, agenda, arquivos, serviço): a partir daqui, o que sai passa pelo Confirmar. */
+    val privateData: Boolean = false,
 )
 
 /** O pedido que o agente fez a um membro da equipe ([call]) e o membro parado no cartão. */
@@ -56,7 +58,13 @@ data class Delegation(val call: ToolCall, val member: AgentRun)
  * Onde o agente parou. [outcome] é o que o Blico mostra e fala. Se [paused] não é nulo, o cartão
  * espera um toque e o agente continua com [AgentRunner.resume]; recusar o cartão encerra o agente.
  */
-data class AgentResult(val outcome: Outcome, val steps: List<AgentStep>, val paused: AgentRun? = null)
+data class AgentResult(
+    val outcome: Outcome,
+    val steps: List<AgentStep>,
+    val paused: AgentRun? = null,
+    /** O agente leu dado pessoal; a conversa em grupo leva isso aos próximos. */
+    val privateData: Boolean = false,
+)
 
 /** O que acontece numa conversa entre agentes, na ordem, para a tela mostrar como mensagens. */
 sealed interface AgentEvent {
@@ -90,6 +98,10 @@ sealed interface AgentEvent {
  * para ele como uma ferramenta `agente_<nome>`; o membro roda o próprio laço, com as próprias
  * ferramentas, e a resposta dele volta como resultado do passo. Membros não pedem a ninguém (um nível).
  * Se o membro para no Confirmar, a equipe inteira para ali.
+ *
+ * Depois que o agente leu dado pessoal (uma ferramenta [Tool.readsPrivate], ou um membro que leu), toda
+ * ferramenta que manda dado para fora ([Tool.egress]) passa pelo Confirmar: um e-mail lido não vira
+ * uma pesquisa no DuckDuckGo ou uma chamada a outro serviço sem a pessoa ver o que sai.
  */
 class AgentRunner(
     private val providers: List<LlmProvider>,
@@ -103,8 +115,9 @@ class AgentRunner(
         agent: AgentProfile,
         ctx: ExecContext,
         context: List<String> = emptyList(),
+        privateData: Boolean = false,
         onEvent: (AgentEvent) -> Unit = {},
-    ): AgentResult = next(AgentRun(text, agent, context = context), ctx, onEvent)
+    ): AgentResult = next(AgentRun(text, agent, context = context, privateData = privateData), ctx, onEvent)
 
     /** Continua depois do toque: [call] é a chamada confirmada ou a opção escolhida. */
     suspend fun resume(run: AgentRun, call: ToolCall, ctx: ExecContext, confirmed: Boolean, onEvent: (AgentEvent) -> Unit = {}): AgentResult {
@@ -179,10 +192,13 @@ class AgentRunner(
         ctx: ExecContext,
         onEvent: (AgentEvent) -> Unit,
     ): AgentResult {
-        sub.paused?.let { return AgentResult(sub.outcome, run.steps, paused = run.copy(delegation = Delegation(call, it))) }
+        sub.paused?.let {
+            return AgentResult(sub.outcome, run.steps, paused = run.copy(delegation = Delegation(call, it)), privateData = run.privateData)
+        }
         // A resposta do membro é dado para o agente, como qualquer resultado: ele decide o que fazer com ela.
         val said = if (sub.outcome is Outcome.Failed) "Não conseguiu: ${sub.outcome.spoken}" else sub.outcome.spoken
-        return next(run.copy(steps = run.steps + AgentStep(call, UntrustedContent.wrap("agente:${member.name}", said))), ctx, onEvent)
+        val step = AgentStep(call, UntrustedContent.wrap("agente:${member.name}", said))
+        return next(run.copy(steps = run.steps + step, privateData = run.privateData || sub.privateData), ctx, onEvent)
     }
 
     /** Executa pela política do [Assistant], recusando o que está fora do agente. */
@@ -192,29 +208,33 @@ class AgentRunner(
         if (allowed.isNotEmpty() && call.tool !in allowed && !confirmed) {
             return Outcome.Failed("Não posso fazer isso", "fora do agente ${run.agent.name}: ${call.tool}")
         }
-        return assistant.execute(call, ctx, confirmed)
+        return assistant.execute(call, ctx, confirmed, run.privateData)
     }
+
+    /** Marca o agente quando o resultado de [call] traz dado pessoal. */
+    private fun marked(run: AgentRun, call: ToolCall): AgentRun =
+        if (!run.privateData && assistant.readsPrivate(call.tool)) run.copy(privateData = true) else run
 
     private suspend fun after(run: AgentRun, call: ToolCall, out: Outcome, ctx: ExecContext, onEvent: (AgentEvent) -> Unit): AgentResult =
         when (out) {
             is Outcome.Done -> {
                 onEvent(AgentEvent.Acted(run.agent.name, out.call, out.spoken))
-                next(run.copy(steps = run.steps + step(out.call, out.spoken)), ctx, onEvent)
+                next(marked(run, out.call).copy(steps = run.steps + step(out.call, out.spoken)), ctx, onEvent)
             }
             is Outcome.Confirm, is Outcome.Choose -> {
                 onEvent(AgentEvent.Waiting(run.agent.name, out))
-                AgentResult(out, run.steps, paused = run)
+                AgentResult(out, run.steps, paused = run, privateData = run.privateData)
             }
             // Falha, lista de arquivos ou resposta encerram: a pessoa vê o resultado e decide.
             is Outcome.Failed, is Outcome.Files, is Outcome.Answer, is Outcome.NotUnderstood -> {
                 val steps = if (out is Outcome.Failed) run.steps else run.steps + step(call, out.spoken)
-                finish(run.copy(steps = steps), out, onEvent)
+                finish((if (out is Outcome.Failed) run else marked(run, call)).copy(steps = steps), out, onEvent)
             }
         }
 
     private fun finish(run: AgentRun, out: Outcome, onEvent: (AgentEvent) -> Unit): AgentResult {
         onEvent(AgentEvent.Said(run.agent.name, out.spoken, failed = out is Outcome.Failed || out is Outcome.NotUnderstood))
-        return AgentResult(out, run.steps)
+        return AgentResult(out, run.steps, privateData = run.privateData)
     }
 
     private fun step(call: ToolCall, spoken: String) = AgentStep(call, UntrustedContent.wrap("ferramenta:${call.tool}", spoken))
