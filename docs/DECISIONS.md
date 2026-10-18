@@ -198,3 +198,11 @@ André pediu que pergunta pontual seja respondida no card, sem mandar para o nav
 - **Privacidade**: a consulta só vai para o DuckDuckGo se o `Redactor` não achar nada pessoal nela (nome da agenda, endereço cadastrado, telefone, e-mail). O trecho que volta entra no prompt por `UntrustedContent.wrap`. A nuvem não entra nesse caminho.
 - **Pergunta que ninguém entendeu** (o Gemma disse que não sabe e a nuvem está desligada ou não decidiu): se parece pergunta, vira busca em vez de "Ainda não sei fazer isso".
 - **Card de resposta**: o que a pessoa disse fica pequeno em cima, a resposta é o destaque (rolável quando é longa), com a fonte em mono, "Copiar" e o caminho para o navegador. As métricas do microfone desceram para o rodapé. O tema (pontos ou ASCII) é assunto de outra etapa e não muda aqui.
+
+## 2026-10-18 — Pergunta pontual sem Gemma nem nuvem
+
+No teste do André, "qual a capital da Mongólia" abriu o navegador. Sem o Gemma pronto e sem a nuvem, a única fonte do card era a resposta instantânea do DuckDuckGo, que quase nunca responde pergunta em frase.
+
+- **Página de resultados do DuckDuckGo como segunda fonte** (`html.duckduckgo.com`, sem JavaScript, sem conta): o card mostra o trecho do primeiro resultado que não é anúncio, com o site de onde veio. Passa pelo mesmo filtro do `Redactor` antes de sair.
+- **Com o trecho em mãos, o Gemma tenta de novo** e responde em uma frase, com o trecho entrando como dado não confiável. Sem o Gemma, o card mostra o trecho como veio.
+- O navegador só abre quando nenhuma das fontes tem nada.

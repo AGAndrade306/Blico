@@ -89,6 +89,40 @@ object DuckDuckGo {
         return null
     }
 
+    /** A página de resultados sem JavaScript do DuckDuckGo, para quando a resposta instantânea vem vazia. */
+    fun htmlUrl(query: String): String =
+        "https://html.duckduckgo.com/html/?q=" + java.net.URLEncoder.encode(query, Charsets.UTF_8).replace("+", "%20") + "&kl=br-pt"
+
+    /**
+     * O trecho do primeiro resultado que não é anúncio, com o site de onde veio. A resposta instantânea
+     * quase nunca cobre pergunta em frase ("qual a capital da Mongólia"); o trecho do primeiro resultado
+     * costuma ter a resposta.
+     */
+    fun parseResults(body: String): WebSnippet? {
+        for (block in body.split(RESULT_START).drop(1)) {
+            if ("result--ad" in block.substringBefore('>')) continue
+            val snippet = SNIPPET.find(block)?.groupValues?.get(1)?.let(::plain)?.takeIf { it.isNotEmpty() } ?: continue
+            val site = SITE.find(block)?.groupValues?.get(1)?.let(::plain)?.substringBefore('/')?.removePrefix("www.")
+            val url = SITE.find(block)?.groupValues?.get(1)?.let(::plain)?.let { if (it.startsWith("http")) it else "https://$it" }
+            return WebSnippet(clip(snippet), site?.takeIf { it.isNotEmpty() } ?: "DuckDuckGo", url)
+        }
+        return null
+    }
+
+    private val RESULT_START = Regex("<div class=\"result ")
+    private val SNIPPET = Regex("class=\"result__snippet\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL)
+    private val SITE = Regex("class=\"result__url\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL)
+
+    /** Sem tags e com as entidades de HTML mais comuns trocadas. */
+    private fun plain(html: String): String = html.replace(Regex("<[^>]+>"), "")
+        .replace("&amp;", "&").replace("&quot;", "\"").replace("&#x27;", "'").replace("&#39;", "'")
+        .replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
+        .replace(Regex("&#(\\d+);")) { it.groupValues[1].toIntOrNull()?.let { c -> String(Character.toChars(c)) } ?: "" }
+        .replace(Regex("\\s+"), " ").trim()
+
+    private fun clip(text: String): String =
+        if (text.length <= MAX) text else text.take(MAX - 1).substringBeforeLast(' ').trimEnd(',', ';', ' ') + "…"
+
     /** Só texto; a API às vezes manda objeto ou lista no lugar, e isso fica de fora. */
     private fun text(o: JsonObject, key: String): String? {
         val v = o[key] as? JsonPrimitive ?: return null
@@ -125,7 +159,12 @@ class DeviceKnowledge(
         return guarded(webTimeoutMs) {
             // Sem conseguir ler a agenda, a consulta não sai: o erro cai no guarded e vira nulo.
             val personal = Redactor(knownEntities()).redact(query).mapping.isNotEmpty()
-            if (personal) null else fetch(DuckDuckGo.instantUrl(query))?.let(DuckDuckGo::parseInstant)
+            if (personal) {
+                null
+            } else {
+                fetch(DuckDuckGo.instantUrl(query))?.let(DuckDuckGo::parseInstant)
+                    ?: fetch(DuckDuckGo.htmlUrl(query))?.let(DuckDuckGo::parseResults)
+            }
         }
     }
 
