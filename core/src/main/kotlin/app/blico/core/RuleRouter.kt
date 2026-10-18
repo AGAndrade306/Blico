@@ -1,5 +1,7 @@
 package app.blico.core
 
+import app.blico.core.tools.Player
+
 /**
  * Primeiro nível do cérebro: entende os comandos mais comuns com regras, sem modelo nenhum.
  * Rápido, previsível e offline. O que não casar aqui vai para o modelo (local ou nuvem).
@@ -76,7 +78,18 @@ class RuleRouter : LlmProvider {
         private const val FILLER = "pra mim|para mim|pra gente|para a gente|pra nós|para nós|aí|por favor|por gentileza|rapidinho|rapidão|agora|já"
         private const val F = "(?:,? (?:$FILLER))*"
 
+        /** "no YouTube Music", "pelo Deezer": o app de música que a pessoa disse, no fim do pedido. */
+        private val IN_PLAYER = "(?: (?:no|na|pelo|pela) (?<app>${Player.spokenNames.joinToString("|")}))?"
+
+        /** "pelo Waze", "no Maps": o app de navegação, no fim do pedido. */
+        private const val BY_NAV = "(?: (?:no|pelo|usando o|com o) (?<app>waze|google maps|maps))?"
+
         private fun g(m: Match, name: String) = m[name]
+
+        private fun navegar(m: Match): ToolCall {
+            val app = g(m, "app")?.takeIf { it.lowercase() == "waze" }
+            return ToolCall("navegar", mapOf("destino" to g(m, "destino")!!) + (app?.let { mapOf("app" to it) } ?: emptyMap()))
+        }
 
         val RULES = listOf(
             // "manda pro João que eu chego em dez minutos"
@@ -104,11 +117,11 @@ class RuleRouter : LlmProvider {
                 ToolCall("ifood_abrir", g(m, "busca")?.let { mapOf("busca" to it) } ?: emptyMap())
             },
             // "me leva pra casa", "navega até o aeroporto", "como chego no shopping"
-            Rule("^(?:me leva|me levar|leva|navega|navegar|vamos|rota|traça rota|traça uma rota|me guia|me guiar)$F(?: $TO_PLACE)? $OPT_ART(?<destino>.+)$") { m ->
-                ToolCall("navegar", mapOf("destino" to g(m, "destino")!!))
+            Rule("^(?:me leva|me levar|leva|navega|navegar|vamos|rota|traça rota|traça uma rota|me guia|me guiar)$F(?: $TO_PLACE)? $OPT_ART(?<destino>.+?)$BY_NAV$") { m ->
+                navegar(m)
             },
-            Rule("^como (?:chego|eu chego|faço pra chegar|vou)$F(?: em| no| na| ao| à| até| pra| para)? $OPT_ART(?<destino>.+)$") { m ->
-                ToolCall("navegar", mapOf("destino" to g(m, "destino")!!))
+            Rule("^como (?:chego|eu chego|faço pra chegar|vou)$F(?: em| no| na| ao| à| até| pra| para)? $OPT_ART(?<destino>.+?)$BY_NAV$") { m ->
+                navegar(m)
             },
             // "me acorda às 7", "alarme para 6 e meia", "coloca um despertador pras 7h30"
             Rule("^(?:me acorda|me acorde|me acordar|acorda|desperta|(?:(?:cria|coloca|põe|poe|bota)$F )?(?:um )?(?:alarme|despertador))$F(?: (?:às|as|pras|para as|para às|pra|para))? (?<hora>.+)$") { m ->
@@ -120,9 +133,10 @@ class RuleRouter : LlmProvider {
             Rule("^(?:(?:(?:cria|coloca|põe|poe|bota|liga)$F )?(?:um )?(?:timer|temporizador|cronômetro|cronometro)$F(?: de| para| pra)?|marca|conta)$F (?<dur>.+)$") { m ->
                 PtNumbers.parseDuration(m.lower("dur")!!)?.let { ToolCall("timer", mapOf("segundos" to "$it")) }
             },
-            // Depois de alarme e timer, porque "coloca" também serve para eles. "toca Djavan", "toca meu mix no spotify", "coloca uma música do Legião"
-            Rule("^(?:toca|toque|tocar|bota|coloca|põe|poe)$F(?: pra tocar)?$F(?: (?:um pouco|algo|alguma coisa) de)? (?<busca>.+?)(?: no spotify)?$") { m ->
-                ToolCall("spotify_tocar", mapOf("busca" to g(m, "busca")!!))
+            // Depois de alarme e timer, porque "coloca" também serve para eles. "toca Djavan", "toca skillex no YouTube Music", "coloca uma música do Legião"
+            Rule("^(?:toca|toque|tocar|bota|coloca|põe|poe)$F(?: pra tocar)?$F(?: (?:um pouco|algo|alguma coisa) de)? (?<busca>.+?)$IN_PLAYER$") { m ->
+                val args = mapOf("busca" to g(m, "busca")!!) + (g(m, "app")?.let { mapOf("app" to it) } ?: emptyMap())
+                ToolCall("tocar_musica", args)
             },
             // Antes da busca na web: "acha o pdf do contrato", "fotos de ontem", "cadê a planilha de gastos"
             Rule("^(?:(?:procura|procure|busca|busque|acha|ache|encontra|encontre|localiza|mostra|mostre|me mostra|me mostre|cadê|cade|onde (?:está|esta|tá|ta|fica))$F(?: (?:o|a|os|as|meu|minha|meus|minhas|aquele|aquela))? )?(?<tipo>$FILE_WORDS)(?: (?:de|do|da|dos|das|com|chamado|chamada|sobre|que tem))?(?: (?<termo>.+?))?(?: no (?:celular|telefone|aparelho))?$") { m ->

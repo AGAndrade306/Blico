@@ -13,7 +13,7 @@ import app.blico.core.WebQuery
 
 /** Todas as ferramentas que o Blico tem hoje. */
 fun builtinTools(): List<Tool> = listOf(
-    AbrirApp, SpotifyTocar, WhatsAppPreparar, WhatsAppEnviar, Ligar, LigarAgora, UberPreparar, NoventaENoveAbrir,
+    AbrirApp, TocarMusica, SpotifyTocar, WhatsAppPreparar, WhatsAppEnviar, Ligar, LigarAgora, UberPreparar, NoventaENoveAbrir,
     IfoodAbrir, Navegar, Alarme, Timer, BuscarWeb, AbrirPesquisa,
 ) + fileTools()
 
@@ -32,20 +32,45 @@ internal object AbrirApp : BaseTool(
     }
 }
 
+/**
+ * Toca no app que a pessoa disse ("no YouTube Music", "no Deezer"). Sem app dito, o Android
+ * escolhe o player padrão, em vez de o Blico supor um.
+ */
+internal object TocarMusica : BaseTool(
+    name = "tocar_musica",
+    description = "Toca uma música, artista, álbum, playlist ou podcast. Preencha app só se a pessoa disser em qual " +
+        "(${Player.entries.joinToString { it.label }})",
+    risk = RiskClass.READ,
+    apps = Player.entries.map { it.packageName }.toSet(),
+    params = mapOf("busca" to "o que tocar", "app" to "o app de música que a pessoa pediu, se pediu"),
+    required = setOf("busca"),
+    title = "Tocar música",
+) {
+    override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
+        val busca = call.arg("busca")!!
+        val pedido = call.arg("app")
+        val player = pedido?.let {
+            Player.find(it) ?: return ToolResult.Failure("player desconhecido: $it", "Ainda não sei tocar música no $it")
+        }
+        val action = DeviceAction.PlayMedia(busca, player?.packageName, player?.searchUri(busca))
+        return ctx.device.perform(action).toToolResult(player?.let { "Tocando $busca no ${it.label}" } ?: "Tocando $busca")
+    }
+}
+
+/** Nome antigo, para agentes salvos que ainda pedem o Spotify por ele. Os modelos só veem [TocarMusica]. */
 internal object SpotifyTocar : BaseTool(
     name = "spotify_tocar",
-    description = "Procura uma música, artista, álbum ou playlist no Spotify",
+    description = "Toca no Spotify",
     risk = RiskClass.READ,
     apps = setOf(Apps.SPOTIFY),
     params = mapOf("busca" to "o que tocar"),
     required = setOf("busca"),
     title = "Tocar no Spotify",
 ) {
-    override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult {
-        val busca = call.arg("busca")!!
-        return ctx.device.perform(DeviceAction.OpenUri("spotify:search:${encode(busca)}", Apps.SPOTIFY))
-            .toToolResult("Procurando $busca no Spotify")
-    }
+    override val exposedToModels = false
+
+    override suspend fun run(call: ToolCall, ctx: ExecContext): ToolResult =
+        TocarMusica.run(ToolCall("tocar_musica", call.args + ("app" to Player.SPOTIFY.label)), ctx)
 }
 
 /** Resolve "contato" em um número: direto se já for número, senão pela agenda. */
@@ -243,12 +268,13 @@ internal object IfoodAbrir : BaseTool(
         ctx.device.perform(DeviceAction.LaunchPackage(Apps.IFOOD)).toToolResult("Abrindo o iFood")
 }
 
+/** Google Maps por padrão; Waze quando a pessoa pede. */
 internal object Navegar : BaseTool(
     name = "navegar",
-    description = "Inicia a navegação no Google Maps até um destino",
+    description = "Inicia a navegação até um destino, no Google Maps ou no Waze se a pessoa pedir",
     risk = RiskClass.READ,
-    apps = setOf(Apps.GOOGLE_MAPS),
-    params = mapOf("destino" to "endereço, lugar ou apelido salvo"),
+    apps = setOf(Apps.GOOGLE_MAPS, Apps.WAZE),
+    params = mapOf("destino" to "endereço, lugar ou apelido salvo", "app" to "Waze, se a pessoa pediu"),
     required = setOf("destino"),
     title = "Navegar",
 ) {
@@ -259,8 +285,13 @@ internal object Navegar : BaseTool(
         } else {
             destino
         }
-        return ctx.device.perform(DeviceAction.OpenUri("google.navigation:q=${encode(address)}", Apps.GOOGLE_MAPS))
-            .toToolResult("Navegando até $destino")
+        val waze = call.arg("app")?.lowercase()?.contains("waze") == true
+        val action = if (waze) {
+            DeviceAction.OpenUri("https://waze.com/ul?q=${encode(address)}&navigate=yes", Apps.WAZE)
+        } else {
+            DeviceAction.OpenUri("google.navigation:q=${encode(address)}", Apps.GOOGLE_MAPS)
+        }
+        return ctx.device.perform(action).toToolResult(if (waze) "Navegando até $destino pelo Waze" else "Navegando até $destino")
     }
 }
 

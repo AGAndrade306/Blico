@@ -10,8 +10,9 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "pede um uber pra casa" | Abre o Uber com o destino preenchido (cadastre casa e trabalho no app). |
 | "chama um 99" | Abre o 99. |
 | "pede uma pizza no iFood" | Abre o iFood. |
-| "toca Djavan" | Procura no Spotify. |
-| "me leva pro aeroporto", "como chego no shopping" | Navegação no Google Maps. |
+| "toca Djavan no YouTube Music", "coloca lo-fi pelo Deezer" | Toca no app que você disse (Spotify, YouTube Music, Deezer, Apple Music, Amazon Music ou YouTube). |
+| "toca Djavan" | Toca no seu player padrão. Na primeira vez o Android pergunta qual; marque "Sempre". |
+| "me leva pro aeroporto", "como chego no shopping" | Navegação no Google Maps. Com "pelo Waze" no fim, vai pelo Waze. |
 | "me acorda às 7", "alarme para seis e meia", "8 da noite" | Cria o alarme. |
 | "timer de 5 minutos", "cronômetro de meia hora" | Inicia o timer. |
 | "pesquisa preço do dólar" | Pesquisa no DuckDuckGo (no app dele, se estiver instalado, ou no navegador). |

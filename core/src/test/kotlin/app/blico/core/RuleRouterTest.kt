@@ -40,10 +40,27 @@ class RuleRouterTest {
 
     @Test
     fun `musica e navegacao`() {
-        assertCall("toca Djavan no Spotify", "spotify_tocar", "busca" to "Djavan")
-        assertCall("coloca pra tocar Legião Urbana", "spotify_tocar", "busca" to "Legião Urbana")
+        assertCall("toca Djavan no Spotify", "tocar_musica", "busca" to "Djavan", "app" to "Spotify")
+        assertCall("coloca pra tocar Legião Urbana", "tocar_musica", "busca" to "Legião Urbana")
         assertCall("me leva pra casa", "navegar", "destino" to "casa")
         assertCall("como chego no aeroporto de Guarulhos", "navegar", "destino" to "aeroporto de Guarulhos")
+    }
+
+    @Test
+    fun `musica vai para o app que a pessoa disse`() {
+        assertCall("toca skillex no YouTube music", "tocar_musica", "busca" to "skillex", "app" to "YouTube music")
+        assertCall("toca Marisa Monte no Deezer", "tocar_musica", "busca" to "Marisa Monte", "app" to "Deezer")
+        assertCall("coloca lo-fi pelo Apple Music", "tocar_musica", "busca" to "lo-fi", "app" to "Apple Music")
+        assertCall("toca o clipe novo da Anitta no YouTube", "tocar_musica", "busca" to "o clipe novo da Anitta", "app" to "YouTube")
+        // Um "no" que não é app fica na busca.
+        assertCall("toca Samba no Pé", "tocar_musica", "busca" to "Samba no Pé")
+    }
+
+    @Test
+    fun `navegacao pelo waze`() {
+        assertCall("me leva pra casa pelo Waze", "navegar", "destino" to "casa", "app" to "Waze")
+        assertCall("como chego no aeroporto no waze", "navegar", "destino" to "aeroporto", "app" to "waze")
+        assertCall("me leva pro trabalho no Maps", "navegar", "destino" to "trabalho")
     }
 
     @Test
@@ -88,9 +105,9 @@ class RuleRouterTest {
         assertCall("manda aí pro João que eu chego em 10 minutos", "whatsapp_preparar", "contato" to "João", "texto" to "eu chego em 10 minutos")
         assertCall("pede pra mim um uber pra casa", "uber_preparar", "destino" to "casa")
         assertCall("chama aí um 99 pro trabalho", "noventa_e_nove_abrir", "destino" to "trabalho")
-        assertCall("toca aí Djavan", "spotify_tocar", "busca" to "Djavan")
-        assertCall("toca pra mim um pouco de Legião Urbana", "spotify_tocar", "busca" to "Legião Urbana")
-        assertCall("coloca Djavan pra mim no Spotify", "spotify_tocar", "busca" to "Djavan")
+        assertCall("toca aí Djavan", "tocar_musica", "busca" to "Djavan")
+        assertCall("toca pra mim um pouco de Legião Urbana", "tocar_musica", "busca" to "Legião Urbana")
+        assertCall("coloca Djavan pra mim no Spotify", "tocar_musica", "busca" to "Djavan", "app" to "Spotify")
         assertCall("me leva aí pra casa", "navegar", "destino" to "casa")
         assertCall("me acorda aí às 7", "alarme", "hora" to "7", "minuto" to "0")
         assertCall("coloca pra mim um timer de 5 minutos", "timer", "segundos" to "300")

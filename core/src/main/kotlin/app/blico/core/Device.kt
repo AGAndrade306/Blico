@@ -5,6 +5,12 @@ sealed interface DeviceAction {
     /** Abre um link ou deep link, opcionalmente forçando o app que deve abrir. */
     data class OpenUri(val uri: String, val packageName: String? = null) : DeviceAction
 
+    /**
+     * Toca [query] pelo pedido padrão do Android ("tocar a partir da busca"), em [packageName] quando a pessoa
+     * disse o app, ou no player que o sistema escolher. Se o app não aceitar o pedido, abre [fallbackUri].
+     */
+    data class PlayMedia(val query: String, val packageName: String? = null, val fallbackUri: String? = null) : DeviceAction
+
     /** Abre um app pelo pacote. */
     data class LaunchPackage(val packageName: String) : DeviceAction
 

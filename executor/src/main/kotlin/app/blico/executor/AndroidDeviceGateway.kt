@@ -1,6 +1,7 @@
 package app.blico.executor
 
 import android.Manifest
+import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -8,11 +9,13 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.AlarmClock
+import android.provider.MediaStore
 import android.telecom.TelecomManager
 import app.blico.core.DeviceAction
 import app.blico.core.DeviceGateway
 import app.blico.core.DeviceResult
 import app.blico.core.tools.Apps
+import app.blico.core.tools.Player
 import app.blico.executor.BlicoAccessibilityService.SendStep
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -36,6 +39,7 @@ class AndroidDeviceGateway(
     override suspend fun perform(action: DeviceAction): DeviceResult = try {
         when (action) {
             is DeviceAction.OpenUri -> openUri(action)
+            is DeviceAction.PlayMedia -> playMedia(action)
             is DeviceAction.LaunchPackage -> launchPackage(action.packageName)
             is DeviceAction.LaunchByName -> launchByName(action.name)
             is DeviceAction.Dial -> start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + dialable(action.number))))
@@ -84,6 +88,22 @@ class AndroidDeviceGateway(
         val pkg = action.packageName
         if (pkg != null && !isInstalled(pkg)) return DeviceResult.NotInstalled(appLabel(action))
         return start(Intent(Intent.ACTION_VIEW, Uri.parse(action.uri)).apply { pkg?.let(::setPackage) })
+    }
+
+    /**
+     * Pede ao player que toque, pelo "tocar a partir da busca" do Android (o mesmo que os assistentes usam).
+     * Com app dito, só nele; sem app, no player padrão do sistema. Se o app não aceitar, abre a busca dele.
+     */
+    private fun playMedia(action: DeviceAction.PlayMedia): DeviceResult {
+        val pkg = action.packageName
+        if (pkg != null && !isInstalled(pkg)) return DeviceResult.NotInstalled(appLabel(action))
+        val play = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+            .putExtra(SearchManager.QUERY, action.query)
+            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+            .apply { pkg?.let(::setPackage) }
+        if (play.resolveActivity(context.packageManager) != null) return start(play)
+        val fallback = action.fallbackUri ?: return DeviceResult.NotInstalled(appLabel(action))
+        return start(Intent(Intent.ACTION_VIEW, Uri.parse(fallback)).apply { pkg?.let(::setPackage) })
     }
 
     /** Liga pelo Telecom, sem passar pelo discador. Só com a permissão de fazer chamadas. */
@@ -205,6 +225,7 @@ class AndroidDeviceGateway(
 
     private fun appLabel(action: DeviceAction): String = when (action) {
         is DeviceAction.OpenUri -> action.packageName?.let { KNOWN_LABELS[it] ?: it } ?: "app"
+        is DeviceAction.PlayMedia -> action.packageName?.let { KNOWN_LABELS[it] ?: it } ?: "app de música"
         is DeviceAction.ShareText -> action.packageName?.let { KNOWN_LABELS[it] ?: it } ?: "app"
         is DeviceAction.LaunchPackage -> KNOWN_LABELS[action.packageName] ?: action.packageName
         is DeviceAction.LaunchByName -> action.name
@@ -234,7 +255,8 @@ class AndroidDeviceGateway(
             "br.com.brainweb.ifood" to "iFood",
             "com.spotify.music" to "Spotify",
             "com.google.android.apps.maps" to "Google Maps",
-        )
+            "com.waze" to "Waze",
+        ) + Player.entries.associate { it.packageName to it.label }
 
         /** Minúsculas e sem acento, para "Câmera" bater com "camera". */
         fun simplify(s: String): String =
