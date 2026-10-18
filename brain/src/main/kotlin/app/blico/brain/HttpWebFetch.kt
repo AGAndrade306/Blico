@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * GET curto para as respostas do card (DuckDuckGo). Só HTTPS, sem cookies nem conta.
+ * GET curto para as respostas do card (DuckDuckGo: resposta instantânea e página de resultados). Só HTTPS, sem cookies nem conta.
  * Qualquer erro vira nulo: aí o card fica com o modelo do celular ou o Blico abre o navegador.
  */
 object HttpWebFetch {
@@ -17,7 +17,7 @@ object HttpWebFetch {
             connectTimeout = timeoutMs
             readTimeout = timeoutMs
             useCaches = false
-            setRequestProperty("accept", "application/json")
+            setRequestProperty("accept", "application/json, text/html;q=0.9")
             setRequestProperty("user-agent", "Blico")
         }
         try {

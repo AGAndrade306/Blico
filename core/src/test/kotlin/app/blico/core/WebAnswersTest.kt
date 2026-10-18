@@ -171,7 +171,56 @@ class WebAnswersTest {
         assertNull(k.lookup("qual o telefone 11 98765-4321"))
         assertTrue(fetched.isEmpty())
         k.lookup("capital da Dinamarca")
-        assertEquals(listOf(DuckDuckGo.instantUrl("capital da Dinamarca")), fetched)
+        // Sem resposta instantânea, tenta a página de resultados; as duas no DuckDuckGo.
+        assertEquals(listOf(DuckDuckGo.instantUrl("capital da Dinamarca"), DuckDuckGo.htmlUrl("capital da Dinamarca")), fetched)
+    }
+
+    @Test
+    fun `sem resposta instantanea usa o primeiro resultado que nao e anuncio`() = runTest {
+        val model = object : LlmProvider {
+            override val id = "local"
+            override suspend fun chooseTools(request: LlmRequest) = LlmDecision(emptyList(), 0.0)
+        }
+        val k = DeviceKnowledge(model, fetch = { url -> if (url.contains("html.duckduckgo")) RESULTS_PAGE else EMPTY_INSTANT })
+        assertEquals(
+            WebSnippet("Ulã Bator é a capital & maior cidade da Mongólia.", "pt.wikipedia.org", "https://pt.wikipedia.org/wiki/Ulã_Bator"),
+            k.lookup("qual a capital da Mongólia"),
+        )
+        assertNull(DuckDuckGo.parseResults("<html>sem resultados</html>"))
+    }
+
+    @Test
+    fun `pergunta pontual com trecho da web pede ao modelo uma frase`() = runTest {
+        val knowledge = FakeKnowledge(
+            answers = mapOf("Mongólia" to "A capital da Mongólia é Ulã Bator."),
+            web = WebSnippet("Ulã Bator é a capital e maior cidade da Mongólia.", "pt.wikipedia.org"),
+        )
+        // Sem referência o modelo não sabe; com o trecho, responde.
+        val withoutRef = object : Knowledge by knowledge {
+            override suspend fun answer(question: String, reference: String?) = if (reference == null) null else knowledge.answer(question, reference)
+        }
+        val out = search("qual a capital da Mongólia", withoutRef)
+        out as Outcome.Answer
+        assertEquals("A capital da Mongólia é Ulã Bator.", out.spoken)
+        assertEquals("pt.wikipedia.org + Gemma no celular", out.source)
+        assertTrue(actions.isEmpty())
+    }
+
+    private companion object {
+        const val EMPTY_INSTANT = """{"Answer":"","AbstractText":"","Definition":""}"""
+        val RESULTS_PAGE = """
+            <div class="result results_links results_links_deep result--ad ">
+              <a class="result__snippet" href="x">Hotéis em Ulaanbaatar a partir de R$71</a>
+              <a class="result__url" href="x">tripadvisor.com.br</a>
+            </div>
+            <div class="result results_links results_links_deep web-result ">
+              <h2 class="result__title"><a class="result__a" href="x">Ulã Bator</a></h2>
+              <a class="result__url" href="x">
+                  pt.wikipedia.org/wiki/Ulã_Bator
+              </a>
+              <a class="result__snippet" href="x"><b>Ulã Bator</b> é a capital &amp; maior cidade da <b>Mongólia</b>.</a>
+            </div>
+        """.trimIndent()
     }
 
     @Test
