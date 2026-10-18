@@ -215,6 +215,7 @@ class MainActivity : ComponentActivity() {
             NeuralVoiceCard(application as BlicoApp)
             VoiceSettings()
             Places()
+            MemoryCard(application as BlicoApp)
             DirectActionsCard(application as BlicoApp, tick)
             CapabilitiesCard(application as BlicoApp, tick)
             LocalModelCard(application as BlicoApp)

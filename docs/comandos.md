@@ -25,6 +25,9 @@ Entendidos por regras, sem modelo e sem internet. Variações comuns funcionam (
 | "aumenta o brilho", "brilho em 40", "brilho automático" | Muda o brilho. Pede "modificar configurações do sistema" na primeira vez. |
 | "quanto de bateria tem", "quanto espaço livre eu tenho", "a internet caiu" | Responde no card e sugere o que fazer quando algo está ruim (bateria baixa, memória cheia, Wi-Fi sem internet). |
 | "liga o wi-fi", "desativa o bluetooth", "abre as configurações de bateria" | O Android não deixa apps ligarem Wi-Fi, Bluetooth, NFC ou modo avião: o Blico abre o painel ou a tela certa e você toca. |
+| "lembra que a Ana é minha irmã", "guarda que eu prefiro corredor no avião" | Mostra o fato no cartão; você toca em Confirmar e ele fica na memória, só no celular e cifrado. |
+| "o que você sabe sobre a Ana", "o que você lembra de mim" | Responde no card com o que estiver guardado. |
+| "esquece que eu moro em Pinheiros" | Acha o fato e pede Confirmar para apagar. Com vários parecidos, pergunta qual. |
 
 O que não está na lista vai para o cérebro do celular (Gemma 4, baixado uma vez em Ajustes › Personalizar). Ele entende os mesmos pedidos ditos de outro jeito ("avisa a Ana que vou me atrasar", "tô com fome, quero um hambúrguer") e responde perguntas de conhecimento geral, tudo sem internet.
 

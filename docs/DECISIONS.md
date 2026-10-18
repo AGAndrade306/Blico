@@ -255,3 +255,15 @@ André trouxe um catálogo de funcionalidades de um assistente líder de mercado
 - **`DeviceResult.NeedsPermission`**: falta de acesso vira fala com o nome do acesso e o porquê, e a tela oferece "Liberar".
 - **Pacote Sistema**: bateria, armazenamento e conexão (com sugestão quando algo está ruim), lanterna, volume (mídia, toque, alarme), modo de som (normal, vibrar, silencioso, Não perturbe), brilho e 24 telas de Configurações. Wi-Fi, Bluetooth, NFC e modo avião o Android 10+ não deixa um app ligar: o Blico abre o painel (por cima do app atual quando existe) e diz isso. Silencioso e Não perturbe pedem o acesso especial ao Não perturbe; brilho pede "modificar configurações do sistema". Nenhuma permissão perigosa nova.
 - **Riscos**: ler estado é classe 0; lanterna, volume, som e brilho são classe 1 (mudam o aparelho, se desfazem com outra frase), como alarme e timer.
+
+## 2026-10-18 — Memória pessoal
+
+Fase 1 do catálogo (item 4) e P1-4 do plano de revisão.
+
+- **Por voz**: "lembra que…" guarda, "o que você sabe sobre…" consulta, "esquece que…" apaga. "Me lembra de…" fica livre para os lembretes com hora.
+- **Guardar e esquecer passam pelo Confirmar** com o texto exato do fato. Assim nada entra na memória sem a pessoa ver, nem um fato plantado por um e-mail que um agente leu. Esquecer acha o fato primeiro e, com vários parecidos, pergunta qual.
+- **Sensível é marcado**: documentos, telefones e e-mails (pelo `Redactor`) e assuntos como senha, saúde, dinheiro e crença. O cartão avisa antes de guardar.
+- **Cifrada no aparelho** (`EncryptedMemoryStore`): AES-GCM com chave própria no Keystore, num arquivo do app que já fica fora de backup e de cópia entre aparelhos. Se a chave se perder (app reinstalado), a memória começa vazia em vez de quebrar.
+- **Só o Gemma do celular lê**: `MemoryAwareProvider` leva até três fatos ligados ao pedido como contexto, para "manda pra minha irmã" achar a Ana. A nuvem nunca recebe a memória. Consultar marca o pedido como dado pessoal, então uma ferramenta de saída depois disso para no Confirmar.
+- **O contexto agora chega ao Gemma**: `LocalBrain.userMessage` passou a incluir `LlmRequest.context`, que antes só a nuvem lia. A conversa em grupo também se beneficia.
+- **Tela em Ajustes** para ver, acrescentar e apagar fatos, um por um ou todos. Ali quem digita ou toca é a própria pessoa, então vale direto.
