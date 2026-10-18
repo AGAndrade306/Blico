@@ -62,6 +62,45 @@ class BuiltinToolsTest {
     }
 
     @Test
+    fun `musica toca no app pedido com a busca dele de reserva`() = runTest {
+        val r = run("tocar_musica", "busca" to "skillex", "app" to "YouTube music")
+        assertEquals(ToolResult.Success("Tocando skillex no YouTube Music"), r)
+        assertEquals(
+            DeviceAction.PlayMedia("skillex", "com.google.android.apps.youtube.music", "https://music.youtube.com/search?q=skillex"),
+            device.actions.single(),
+        )
+    }
+
+    @Test
+    fun `musica sem app deixa o android escolher o player`() = runTest {
+        run("tocar_musica", "busca" to "Djavan")
+        assertEquals(DeviceAction.PlayMedia("Djavan"), device.actions.single())
+    }
+
+    @Test
+    fun `app de musica desconhecido nao cai em outro`() = runTest {
+        val r = run("tocar_musica", "busca" to "Djavan", "app" to "Tidal")
+        assertIs<ToolResult.Failure>(r)
+        assertTrue(device.actions.isEmpty())
+    }
+
+    @Test
+    fun `nome antigo do spotify continua tocando no spotify`() = runTest {
+        run("spotify_tocar", "busca" to "Djavan")
+        assertEquals(DeviceAction.PlayMedia("Djavan", "com.spotify.music", "spotify:search:Djavan"), device.actions.single())
+        assertTrue(registry["spotify_tocar"]!!.exposedToModels.not())
+    }
+
+    @Test
+    fun `navegar pelo waze quando pedido`() = runTest {
+        run("navegar", "destino" to "casa", "app" to "Waze")
+        assertEquals(
+            DeviceAction.OpenUri("https://waze.com/ul?q=Rua%20das%20Flores%2C%20120%2C%20S%C3%A3o%20Paulo&navigate=yes", "com.waze"),
+            device.actions.single(),
+        )
+    }
+
+    @Test
     fun `uber resolve o apelido do lugar`() = runTest {
         run("uber_preparar", "destino" to "casa")
         val uri = (device.actions.single() as DeviceAction.OpenUri).uri

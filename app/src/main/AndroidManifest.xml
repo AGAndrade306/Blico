@@ -36,7 +36,17 @@
         <package android:name="com.taxis99" />
         <package android:name="br.com.brainweb.ifood" />
         <package android:name="com.spotify.music" />
+        <package android:name="com.google.android.apps.youtube.music" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="deezer.android.app" />
+        <package android:name="com.apple.android.music" />
+        <package android:name="com.amazon.mp3" />
         <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.waze" />
+        <!-- Players que aceitam "tocar a partir da busca", para tocar no padrão quando a pessoa não diz o app. -->
+        <intent>
+            <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+        </intent>
         <package android:name="com.duckduckgo.mobile.android" />
         <!-- Navegador padrão, para a busca no DuckDuckGo sem o app dele. -->
         <intent>

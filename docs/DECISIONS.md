@@ -243,3 +243,14 @@ Achado da revisão: um agente lia um e-mail (`gmail_ler`, classe 0) e, a pedido 
 ## 2026-10-18 — Nada sai na cópia entre aparelhos
 
 - **`data_extraction_rules.xml` exclui todos os domínios** do backup na nuvem e da cópia de celular para celular. No Android 12+, `allowBackup="false"` desliga só o backup na nuvem; o Smart Switch levaria agentes, lugares, atividade e preferências para outro aparelho. Os segredos cifrados nem funcionariam lá (a chave do Keystore não viaja), mas o resto iria em claro.
+
+## 2026-10-18 — "Toca" vai para o player que a pessoa disse
+
+O André pediu "toca skillex no YouTube Music" e ouviu "Não encontrei o Spotify no celular": a regra só tirava "no spotify" do fim e a única ferramenta de música era `spotify_tocar`.
+
+- **Uma ferramenta, `tocar_musica`, com `app` opcional.** A regra pega "no/na/pelo/pela <player>" no fim; um "no" que não é nome de player fica na busca ("toca Samba no Pé").
+- **`Player` no `core`** lista os apps de música conhecidos (Spotify, YouTube Music, Deezer, Apple Music, Amazon Music, YouTube), os nomes falados e a busca de cada um.
+- **Toca pelo pedido padrão do Android** (`MEDIA_PLAY_FROM_SEARCH`, o mesmo dos assistentes), preso ao pacote do app dito. Se o app não aceitar, abre a busca dele. Um app dito e não instalado responde com o nome dele, nunca cai em outro.
+- **Sem app dito, o Android escolhe** o player padrão (pergunta na primeira vez), em vez de o Blico supor o Spotify.
+- **`spotify_tocar` fica como nome antigo**, escondido dos modelos, para agentes salvos que ainda o pedem.
+- **Navegação aceita Waze** ("pelo Waze"); sem isso, continua no Google Maps.
